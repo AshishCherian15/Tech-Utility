@@ -182,6 +182,73 @@ export default function SettingsClient({ user, entryCount }: SettingsClientProps
           </div>
         </div>
 
+        {/* Temporary / Guest Account Access */}
+        <div className="settings-section">
+          <div className="settings-section-title">Account Access & User Management</div>
+          <div className="settings-card">
+            <div className="settings-row-title" style={{ marginBottom: 6 }}>Create Temporary / Guest User</div>
+            <div className="settings-row-desc" style={{ marginBottom: 16 }}>
+              Grant specific users or guests temporary login access to your app with custom username and password.
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const email = (form.elements.namedItem("guestEmail") as HTMLInputElement).value;
+                const username = (form.elements.namedItem("guestUsername") as HTMLInputElement).value;
+                const password = (form.elements.namedItem("guestPassword") as HTMLInputElement).value;
+
+                try {
+                  const res = await fetch("/api/users/create", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, username, password }),
+                  });
+                  const json = await res.json();
+                  if (!res.ok) throw new Error(json.error);
+                  alert(`✅ User created successfully!\n\nEmail: ${email}\nUsername: ${username}`);
+                  form.reset();
+                } catch (err: any) {
+                  alert(`❌ Error creating user: ${err.message}`);
+                }
+              }}
+              style={{ display: "flex", flexDirection: "column", gap: 12 }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <input
+                  type="text"
+                  name="guestUsername"
+                  placeholder="Username"
+                  required
+                  className="input"
+                  style={{ background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+                />
+                <input
+                  type="email"
+                  name="guestEmail"
+                  placeholder="User Email"
+                  required
+                  className="input"
+                  style={{ background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+                />
+              </div>
+              <input
+                type="password"
+                name="guestPassword"
+                placeholder="Temporary Password (min 6 characters)"
+                required
+                minLength={6}
+                className="input"
+                style={{ background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+              />
+              <button type="submit" className="btn btn-primary btn-sm" style={{ alignSelf: "flex-start", marginTop: 4 }}>
+                Create Access Account
+              </button>
+            </form>
+          </div>
+        </div>
+
         {/* Danger zone */}
         <div className="settings-section">
           <div className="settings-section-title" style={{ color: "#f87171" }}>Danger Zone</div>
