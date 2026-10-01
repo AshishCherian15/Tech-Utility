@@ -186,20 +186,6 @@ export default function LoginPage() {
                 )}
                 Continue with Google
               </button>
-
-              <button
-                id="btn-sign-in-github"
-                className="login-btn login-btn-github"
-                onClick={() => signIn("github")}
-                disabled={!!loading}
-              >
-                {loading === "github" ? (
-                  <div className="login-spinner" />
-                ) : (
-                  <GitBranch size={18} />
-                )}
-                Continue with GitHub
-              </button>
             </div>
           )}
 
