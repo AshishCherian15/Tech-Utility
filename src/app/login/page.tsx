@@ -13,19 +13,37 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const signInWithEmail = async (e: React.FormEvent) => {
+  const [isSignUp, setIsSignUp] = useState(false);
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading("email" as any);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      setError(error.message);
-      setLoading(null);
+    if (isSignUp) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(null);
+      } else {
+        alert("Account created successfully! Logging you in...");
+        const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
+        if (loginErr) setError(loginErr.message);
+        else window.location.href = "/dashboard";
+      }
     } else {
-      window.location.href = "/dashboard";
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(null);
+      } else {
+        window.location.href = "/dashboard";
+      }
     }
   };
 
@@ -107,7 +125,7 @@ export default function LoginPage() {
           </div>
 
           {authMode === "email" ? (
-            <form onSubmit={signInWithEmail} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <form onSubmit={handleEmailAuth} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <input
                 type="email"
                 placeholder="Your Email"
@@ -136,8 +154,17 @@ export default function LoginPage() {
                 className="btn btn-primary"
                 style={{ width: "100%", padding: "12px", borderRadius: 10, marginTop: 4, fontWeight: 600 }}
               >
-                {loading === ("email" as any) ? "Signing in..." : "Sign In with Password"}
+                {loading === ("email" as any) ? (isSignUp ? "Creating Account..." : "Signing in...") : (isSignUp ? "Create Account & Sign In" : "Sign In with Password")}
               </button>
+              <div style={{ textAlign: "center", marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  style={{ background: "none", border: "none", color: "var(--brand-blue-bright)", fontSize: 13, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  {isSignUp ? "Already have an account? Sign In" : "First time logging in? Create account"}
+                </button>
+              </div>
             </form>
           ) : (
             <div className="login-buttons">
