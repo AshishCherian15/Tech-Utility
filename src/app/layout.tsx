@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { ToastProvider } from "@/components/Toast";
 
 export const metadata: Metadata = {
   title: {
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
   keywords: ["personal knowledge base", "tech tips", "commands", "bookmarks", "tech memory"],
   authors: [{ name: "Ash" }],
   creator: "Ash",
-  robots: "noindex, nofollow", // private tool
+  robots: "noindex, nofollow",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.ico",
@@ -33,8 +34,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );
 }
+

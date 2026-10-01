@@ -43,6 +43,7 @@ export interface Tag {
 export interface EntryLink {
   id: string;
   entry_id: string;
+  user_id: string;
   platform: string;
   url: string;
   label: string | null;

@@ -29,7 +29,7 @@ const navItems = [
 ];
 
 const quickLinks = [
-  { href: "/dashboard?filter=favorites", icon: Star, label: "Favorites" },
+  { href: "/favorites", icon: Star, label: "Favorites" },
   { href: "/dashboard?filter=recent", icon: Clock, label: "Recently Viewed" },
 ];
 

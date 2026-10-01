@@ -7,6 +7,7 @@ import Link from "next/link";
 import type { Category, Entry, EntryType, DifficultyLevel, Platform } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/Toast";
 
 const ENTRY_TYPES: EntryType[] = ["Tip","Trick","Hack","App","Website","Tool","Extension","Command","Guide","Prompt"];
 const DIFFICULTY_LEVELS: DifficultyLevel[] = ["Easy", "Medium", "Hard"];
@@ -37,6 +38,7 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
   const router = useRouter();
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { success, error: toastError, ai: toastAi } = useToast();
 
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -109,8 +111,10 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input_type: "text", content: aiInput }),
       });
-      if (res.ok) {
-        const draft = await res.json();
+      const draft = await res.json();
+      if (!res.ok) {
+        toastError(draft.error ?? "AI autofill unavailable — fill manually");
+      } else {
         setForm(prev => ({
           ...prev,
           title: draft.title ?? prev.title,
@@ -128,6 +132,7 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
         }));
         setAiDrafted(true);
         setShowAiPanel(false);
+        toastAi("Fields drafted — review everything before saving");
       }
     } finally {
       setAiLoading(false);
@@ -150,10 +155,14 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
       };
 
       if (isEdit) {
-        await supabase.from("entries").update(payload).eq("id", entry.id);
-        router.push(`/entries/${entry.id}`);
+        const { error: err } = await supabase.from("entries").update(payload).eq("id", entry!.id);
+        if (err) { toastError("Failed to save changes"); return; }
+        success("Changes saved!");
+        router.push(`/entries/${entry!.id}`);
       } else {
-        const { data } = await supabase.from("entries").insert(payload).select().single();
+        const { data, error: err } = await supabase.from("entries").insert(payload).select().single();
+        if (err) { toastError("Failed to create entry"); return; }
+        success("Entry created! ✨");
         if (data) router.push(`/entries/${data.id}`);
         else router.push("/dashboard");
       }

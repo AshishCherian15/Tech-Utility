@@ -44,9 +44,18 @@ export default function SettingsClient({ user, entryCount }: SettingsClientProps
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      alert(`Import preview: ${data.entries?.length ?? 0} entries found. Import API coming in Phase 2.`);
+      const entryCount = data.entries?.length ?? 0;
+      if (!confirm(`Import ${entryCount} entries from "${file.name}"? Duplicate titles will still be imported as separate entries.`)) return;
+      const res = await fetch("/api/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      alert(`✅ Import complete!\n\nImported: ${result.imported}\nSkipped: ${result.skipped}${result.errors?.length ? `\n\nErrors:\n${result.errors.slice(0,5).join("\n")}` : ""}`);
+      router.refresh();
     } catch {
-      alert("Invalid JSON file");
+      alert("❌ Failed to import — check that the file is a valid Ash-Tech JSON export.");
     } finally {
       setImportingFile(false);
     }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 import {
   ArrowLeft, Edit, Trash2, Star, Pin, Copy, Check,
   ExternalLink, Terminal, Tag, ChevronRight, Download,
@@ -29,11 +30,13 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
   const [pinned, setPinned] = useState(entry.pinned);
   const router = useRouter();
   const supabase = createClient();
+  const { success, error } = useToast();
 
   const handleCopy = async () => {
     if (entry.command_snippet) {
       await navigator.clipboard.writeText(entry.command_snippet);
       setCopied(true);
+      success("Copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -42,20 +45,24 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
     const newVal = !favorited;
     setFavorited(newVal);
     await supabase.from("entries").update({ favorited: newVal }).eq("id", entry.id);
+    success(newVal ? "Added to Favorites" : "Removed from Favorites");
   };
 
   const togglePin = async () => {
     const newVal = !pinned;
     setPinned(newVal);
     await supabase.from("entries").update({ pinned: newVal }).eq("id", entry.id);
+    success(newVal ? "Pinned to top" : "Unpinned");
   };
 
   const handleDelete = async () => {
     if (!confirm("Move this entry to trash?")) return;
-    await supabase
+    const { error: err } = await supabase
       .from("entries")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", entry.id);
+    if (err) { error("Failed to delete entry"); return; }
+    success("Moved to trash");
     router.push("/dashboard");
   };
 

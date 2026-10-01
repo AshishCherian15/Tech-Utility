@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 interface DashboardClientProps {
   initialEntries: Entry[];
   categories: Category[];
+  pageTitle?: string;
+  emptyMessage?: string;
 }
 
 const ENTRY_TYPES: EntryType[] = ["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"];
@@ -33,7 +35,7 @@ const TYPE_COLORS: Record<EntryType, string> = {
   Prompt: "badge-pink",
 };
 
-export default function DashboardClient({ initialEntries, categories }: DashboardClientProps) {
+export default function DashboardClient({ initialEntries, categories, pageTitle, emptyMessage }: DashboardClientProps) {
   const [entries] = useState<Entry[]>(initialEntries);
   const [search, setSearch] = useState("");
   const [view, setView] = useState<ViewMode>("grid");
@@ -96,10 +98,10 @@ export default function DashboardClient({ initialEntries, categories }: Dashboar
       <section className="dashboard-hero circuit-bg">
         <div className="dashboard-hero-content">
           <h1 className="dashboard-hero-title">
-            Your Tech Memory
+            {pageTitle ?? "Your Tech Memory"}
           </h1>
           <p className="dashboard-hero-sub">
-            {entries.length} entries saved · search to find anything instantly
+            {entries.length} {entries.length === 1 ? "entry" : "entries"} saved · search to find anything instantly
           </p>
 
           {/* Search pill */}
@@ -122,7 +124,10 @@ export default function DashboardClient({ initialEntries, categories }: Dashboar
                 <X size={14} />
               </button>
             )}
-            <kbd style={{ fontSize: 11, color: "var(--text-muted)", padding: "2px 6px", background: "rgba(255,255,255,0.06)", borderRadius: 4, border: "1px solid var(--border-subtle)", whiteSpace: "nowrap" }}>
+            <kbd
+              style={{ fontSize: 11, color: "var(--text-muted)", padding: "2px 6px", background: "rgba(255,255,255,0.06)", borderRadius: 4, border: "1px solid var(--border-subtle)", whiteSpace: "nowrap", cursor: "pointer" }}
+              onClick={e => { e.stopPropagation(); window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true })); }}
+            >
               Ctrl K
             </kbd>
           </div>
@@ -283,12 +288,12 @@ export default function DashboardClient({ initialEntries, categories }: Dashboar
               {search ? <Search size={40} /> : <Plus size={40} />}
             </div>
             <h2 className="empty-state-title">
-              {search ? `No results for "${search}"` : "No entries yet"}
+              {search ? `No results for "${search}"` : emptyMessage ? "Nothing here yet" : "No entries yet"}
             </h2>
             <p className="empty-state-desc">
               {search
                 ? "Try a different search term or clear the filters"
-                : "Add your first tech tip, command, app, or discovery"}
+                : emptyMessage ?? "Add your first tech tip, command, app, or discovery"}
             </p>
             {!search && (
               <Link href="/entries/new" className="btn btn-primary" style={{ marginTop: 16 }}>
