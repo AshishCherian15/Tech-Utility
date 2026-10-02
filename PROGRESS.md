@@ -38,8 +38,10 @@
 - **Strict Guardrails**: Extraction-only system prompt (no invented URLs, no auto-saving without owner review).
 
 ### ✅ Phase 5: Account Access & Compliance (100% Complete)
-- **Guest Account Creation**: Endpoint [`/api/users/create/route.ts`](./src/app/api/users/create/route.ts) for provisioning guest users with custom username and password.
-- **Session Duration Expiration**: Selection for guest account expirations (`1 Hour`, `24 Hours`, `7 Days`, `30 Days`).
+- **Permanent & Guest User Management**: Endpoint [`/api/users/create/route.ts`](./src/app/api/users/create/route.ts) for provisioning Permanent or Guest users with username, password, and account status toggles.
+- **Custom Time Expiration Setup**: Supports `No Expiration`, preset durations (`1h`, `24h`, `7d`, `30d`), and custom **Hours / Minutes / Seconds** setup.
+- **Password Reveal Toggle**: Password visibility toggle (`Eye` / `EyeOff`) added to user creation UI in [`SettingsClient.tsx`](./src/components/SettingsClient.tsx).
+- **Link Preview & OpenGraph Extraction**: Endpoint [`/api/link-preview/route.ts`](./src/app/api/link-preview/route.ts) with `🌐 Link Preview` trigger button in [`EntryForm.tsx`](./src/components/EntryForm.tsx).
 - **Privacy & DPDP Compliance**: `robots.txt` (`Disallow: /`), `noindex, nofollow` metadata, zero third-party telemetry.
 
 ---
