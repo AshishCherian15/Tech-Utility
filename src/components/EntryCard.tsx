@@ -106,7 +106,7 @@ export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
             alt={entry.title}
             style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s ease" }}
           />
-          {entry.url && (
+          {entry.command_snippet && (
             <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", padding: "4px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#fff" }}>
               <ExternalLink size={10} /> Link
             </div>
