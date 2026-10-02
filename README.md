@@ -22,36 +22,27 @@ Ash-Tech is a private, login-protected personal knowledge base for **tips, trick
 
 > **Name origin:** **Ash** (owner's name) + **Tech** (what it's about). Short, easy to say, easy to remember.
 
-### Why it exists
-
-Useful discoveries are scattered across:
-- 📱 Phone screenshots
-- ☁️ Google Drive files  
-- 💬 WhatsApp saved messages
-- 📝 Scattered notes
-
-When you need something again, you either can't find it or re-search the web for something you already found once. Ash-Tech gives every discovery **one consistent shape** and makes it findable by what you remember, not where you put it.
-
 ---
 
-## Features
+## Complete Features
 
-### ✅ Phase 1 & 2 (Complete)
-- 🔐 **Secure login** — Google / GitHub OAuth + optional TOTP 2FA, no public sign-up
-- 📝 **Structured entries** — Title, category, type, tags, usefulness fields, command snippet, images, links
-- 🔍 **Instant search** — Full-text across title, tags, command text, and category
-- 📂 **Custom categories** — Name, emoji icon, color, description
-- 🗑️ **30-day trash bin** — Soft delete with restore, auto-purge
-- 📤 **JSON export / import** — Full library backup, no lock-in
-- 🤖 **AI autofill** — Paste a URL/title/description → Gemini drafts the entry fields for your review (never auto-saves)
-- 🌗 **Dark mode default** — Clean, premium dark UI
+### 🔐 Auth & Security
+- **Google OAuth & Email/Password Sign-In**: Login with Google or register/login with custom credentials.
+- **Guest / Temporary User Access Management**: Provision secondary guest accounts directly from Settings with custom username, password, and session duration expirations (`1 Hour`, `24 Hours`, `7 Days`, `30 Days`).
+- **Database Row Level Security (RLS)**: Enforced at the Supabase kernel level (`auth.uid() = user_id`) on all 7 database tables.
+- **Privacy & Indian DPDP Act 2023 Compliance**: Zero third-party telemetry, explicit `robots.txt` (`Disallow: /`), and `noindex, nofollow` metadata.
 
-### 🔜 Coming Next (Phase 3–4)
-- Grid / List / Table / Gallery view switcher *(UI done, polish in progress)*
-- Ctrl+K command palette
-- Favorites & recently viewed
-- Link preview (title/favicon/image)
-- Per-platform app link resolver
+### 🤖 AI Engine & Model Settings
+- **Dual LLM Provider Engine**: Supports **Groq (Llama 3.3 70B Versatile)** as primary and **Google Gemini (1.5 Flash)** as fallback.
+- **Settings AI Model Manager**: Model selector buttons and **👁️ Reveal / Hide API Key** input fields stored safely in client environment/localStorage.
+- **Strict Human-in-the-Loop Review**: AI drafts entry fields but **never auto-saves** without owner review.
+
+### 🎨 Visual & Desktop UX
+- **Collapsible Side Navigation Panel**: Floating expand/collapse button (`<PanelLeftClose>` / `<PanelLeftOpen>`) for full-screen entry browsing.
+- **Official Brand Logo**: Prominently displayed 48x48px official logo in the sidebar header and login screens.
+- **Xiaomi Notes-Style Card Previews**: Masonry & grid cards showcase top header image previews for entries with attached screenshots or site links.
+- **Global Command Palette (`Ctrl + K`)**: Keyboard-driven navigation and search across all entries.
+- **Toast Notifications System**: Slide-up feedback toasts for success, error, info, warning, and AI events.
 
 ---
 
@@ -59,15 +50,13 @@ When you need something again, you either can't find it or re-search the web for
 
 | Layer | Choice |
 |---|---|
-| **Frontend** | Next.js 16 (App Router) · React · TypeScript |
-| **Styling** | Vanilla CSS (custom design system) · no Tailwind utilities used |
-| **Backend** | Next.js Route Handlers (Vercel serverless) |
+| **Frontend** | Next.js 16 (App Router) · React 19 · TypeScript 5 |
+| **Styling** | Custom Vanilla CSS Tokens (`globals.css`) · Glassmorphism · Smooth Animations |
+| **Backend** | Next.js Serverless API Routes · Edge Middleware (`src/middleware.ts`) |
 | **Database** | Supabase Postgres (with RLS on every table) |
-| **Auth** | Supabase Auth — Google/GitHub OAuth + TOTP 2FA |
-| **Storage** | Supabase Storage — private bucket, signed URLs |
-| **AI** | Gemini 1.5 Flash (free tier) — server-side only, extraction-only prompting |
-| **Hosting** | Vercel Hobby plan |
-| **Cost** | **$0/month** — all free tiers |
+| **Auth** | Supabase Auth — Google OAuth + Email/Password + TOTP 2FA |
+| **AI LLM** | Groq (Llama 3.3 70B) & Google Gemini 1.5 Flash |
+| **Hosting** | Vercel Serverless |
 
 ---
 
@@ -75,121 +64,44 @@ When you need something again, you either can't find it or re-search the web for
 
 ```
 app/
+├── database/
+│   ├── schema.sql              # Full Supabase schema + RLS policies
+│   └── seed_sample_entries.sql # Seed script for CodeFronts & Windows Clipboard
+├── public/
+│   ├── logo.png                # Official Ash-Tech brand logo
+│   ├── CodeFronts.com.png      # Sample entry preview image
+│   ├── icon-192.png            # PWA 192px app icon
+│   ├── icon-512.png            # PWA 512px app icon
+│   ├── manifest.json           # Installable PWA manifest
+│   └── robots.txt              # Privacy robots.txt (Disallow: /)
 ├── src/
 │   ├── app/
-│   │   ├── (app)/              # Auth-protected app routes
-│   │   │   ├── dashboard/      # Main home page
-│   │   │   ├── entries/        # Entry CRUD + detail view
-│   │   │   ├── categories/     # Category management
-│   │   │   ├── trash/          # 30-day soft-delete bin
-│   │   │   └── settings/       # Profile, export, security
-│   │   ├── api/                # Serverless API routes
-│   │   │   ├── autofill/       # AI entry drafting (Gemini)
-│   │   │   ├── entries/        # CRUD + search
-│   │   │   └── export/         # JSON backup download
-│   │   ├── auth/callback/      # OAuth redirect handler
-│   │   └── login/              # Login page
-│   ├── components/             # Reusable UI components
-│   ├── lib/
-│   │   ├── supabase/           # Typed Supabase client factories
-│   │   ├── types.ts            # All TypeScript types
-│   │   └── utils.ts            # Utility helpers
-│   └── proxy.ts                # Auth guard (Next.js 16)
-├── database/
-│   └── schema.sql              # Full Supabase schema + RLS
-├── public/
-│   └── manifest.json           # PWA manifest
-├── .env.example                # Environment variable template
-├── LICENSE                     # MIT
-└── SECURITY.md                 # Security policy
+│   │   ├── (app)/              # Auth-protected app shell (Dashboard, Entries, Categories, Trash, Settings)
+│   │   ├── api/                # API routes (autofill, entries, export, import, link-preview, users/create)
+│   │   ├── auth/callback/      # OAuth redirect code exchange handler
+│   │   ├── login/              # Dual OAuth & Email/Password login page
+│   │   └── layout.tsx          # Root layout & SEO metadata
+│   ├── components/             # Reusable UI components (ShellLayout, EntryCard, CommandPalette, Toast, etc.)
+│   ├── lib/                    # Supabase client/server factories, types, utils
+│   ├── middleware.ts           # Next.js Edge Auth guard & session persistence
+│   └── proxy.ts                # Route matcher logic
 ```
 
 ---
 
-## Local Development
-
-### Prerequisites
-- Node.js 18+
-- npm
-- A [Supabase](https://supabase.com) account (free)
-- A [Gemini API key](https://aistudio.google.com/app/apikey) (optional, for AI autofill)
-
-### 1. Clone & install
+## Quick Setup & Running Locally
 
 ```bash
 git clone https://github.com/AshishCherian15/Ash-Tech.git
 cd Ash-Tech/app
 npm install
-```
-
-### 2. Set up Supabase
-
-1. Create a new Supabase project
-2. Run [`database/schema.sql`](./database/schema.sql) in the SQL Editor
-3. Create a private Storage bucket named `entry-images`
-4. Enable Google and/or GitHub OAuth providers in Authentication → Providers
-5. Disable "Enable email signups" in Authentication → Settings
-
-### 3. Configure environment
-
-```bash
-cp .env.example .env.local
-# Edit .env.local with your Supabase URL, anon key, and optional Gemini API key
-```
-
-### 4. Run locally
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to the login page.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## Deployment
+## AI Agent Hand-Off Guide
 
-### Vercel (recommended)
-
-```bash
-npx vercel --prod
-```
-
-Add all `.env.local` values as Vercel Environment Variables. Mark `SUPABASE_SERVICE_ROLE_KEY` and `GEMINI_API_KEY` as **Secret** (not exposed to the browser).
-
-Also add your Vercel URL to Supabase:
-- Authentication → URL Configuration → Redirect URLs: `https://YOUR_APP.vercel.app/auth/callback`
-
----
-
-## Build Phases
-
-| Phase | Status | Goal |
-|---|---|---|
-| **Phase 1** | ✅ Done | Auth skeleton, Supabase setup, secure deployment |
-| **Phase 2** | ✅ Done | Core CRUD, search, categories, trash, export |
-| **Phase 3** | 🔜 Next | View switcher polish, Ctrl+K palette, dark/light toggle |
-| **Phase 4** | 📅 Planned | AI autofill, link preview, app link resolver |
-| **Phase 5** | 📅 Planned | Tip of the day, version history, usage tracking |
-| **Phase 6** | 📅 Planned | PWA install, per-entry export, link health checker |
-| **Phase 7** | 📅 Planned | Browser extension |
-
----
-
-## Security
-
-See [SECURITY.md](./SECURITY.md) for the full security model including RLS policies, AI guardrails, and secret management.
-
-**Key points:**
-- Every API route validates the session server-side — no client-supplied user IDs trusted
-- RLS on every table — owner-only read/write enforced at the database level
-- AI output is never auto-saved — always requires owner review
-- The AI API key never reaches the browser
-
----
-
-## License
-
-[MIT](./LICENSE) — © 2026 Ashish Cherian
-
-*Private personal project. Not published as a public product in V1.*
+For detailed architecture, implementation progress, completed features, and next steps for any AI coding agent, read **[PROGRESS.md](./PROGRESS.md)**.
