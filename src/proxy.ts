@@ -34,13 +34,15 @@ export async function proxy(request: NextRequest) {
   const protectedPaths = ["/dashboard", "/entries", "/categories", "/trash", "/settings"];
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
 
+  // If user is not authenticated and trying to access protected paths, redirect to login
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname === "/login") {
+  // If user IS authenticated and on /login or root /, redirect to /dashboard
+  if (user && (pathname === "/login" || pathname === "/")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
