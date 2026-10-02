@@ -192,6 +192,36 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
           <button
             type="button"
             className="btn btn-secondary btn-sm"
+            onClick={async () => {
+              const urlPrompt = prompt("Enter website URL to generate Link Preview metadata:");
+              if (!urlPrompt) return;
+              try {
+                const res = await fetch("/api/link-preview", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ url: urlPrompt }),
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                setForm(prev => ({
+                  ...prev,
+                  title: data.title || prev.title,
+                  what_it_is: data.description || prev.what_it_is,
+                  images: data.image ? [...prev.images, data.image] : prev.images,
+                }));
+                toastAi("✅ Link metadata and preview image loaded!");
+              } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : "Preview fetch failed";
+                toastError(`Could not fetch link preview: ${msg}`);
+              }
+            }}
+            id="btn-link-preview"
+          >
+            🌐 Link Preview
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
             onClick={() => setShowAiPanel(!showAiPanel)}
             id="btn-ai-autofill"
           >

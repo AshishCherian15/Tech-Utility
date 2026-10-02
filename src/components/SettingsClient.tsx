@@ -3,12 +3,260 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
-import { Download, Upload, Shield, Loader2, GitBranch, Globe } from "lucide-react";
+import { Download, Upload, Shield, Loader2, GitBranch, Globe, Eye, EyeOff, UserCheck, UserX, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface SettingsClientProps {
   user: User;
   entryCount: number;
+}
+
+function UserManagementForm() {
+  const [accountType, setAccountType] = useState<"permanent" | "temporary">("temporary");
+  const [showPassword, setShowPassword] = useState(false);
+  const [expirationMode, setExpirationMode] = useState<"none" | "preset" | "custom">("preset");
+  const [presetDuration, setPresetDuration] = useState("1h");
+  const [customHours, setCustomHours] = useState("0");
+  const [customMinutes, setCustomMinutes] = useState("30");
+  const [customSeconds, setCustomSeconds] = useState("0");
+  const [enabled, setEnabled] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    const form = e.currentTarget;
+    const email = (form.elements.namedItem("userEmail") as HTMLInputElement).value;
+    const username = (form.elements.namedItem("username") as HTMLInputElement).value;
+    const password = (form.elements.namedItem("userPassword") as HTMLInputElement).value;
+
+    let durationString = "none";
+    if (accountType === "temporary") {
+      if (expirationMode === "none") {
+        durationString = "none";
+      } else if (expirationMode === "preset") {
+        durationString = presetDuration;
+      } else {
+        const h = parseInt(customHours || "0", 10);
+        const m = parseInt(customMinutes || "0", 10);
+        const s = parseInt(customSeconds || "0", 10);
+        const totalSecs = (h * 3600) + (m * 60) + s;
+        durationString = `${totalSecs}s`;
+      }
+    }
+
+    try {
+      const res = await fetch("/api/users/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          username,
+          password,
+          account_type: accountType,
+          duration: durationString,
+          enabled,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      alert(`✅ User created successfully!\n\nType: ${accountType.toUpperCase()}\nEmail: ${email}\nStatus: ${enabled ? "ACTIVE" : "DISABLED"}\nExpiration: ${durationString === "none" ? "No Expiration" : durationString}`);
+      form.reset();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error creating user";
+      alert(`❌ Error: ${msg}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Account Type Selector */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <button
+          type="button"
+          onClick={() => setAccountType("temporary")}
+          style={{
+            padding: "10px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: accountType === "temporary" ? "rgba(59,130,246,0.15)" : "var(--bg-base)",
+            border: `1px solid ${accountType === "temporary" ? "#3b82f6" : "var(--border-subtle)"}`,
+            color: accountType === "temporary" ? "#60a5fa" : "var(--text-muted)", cursor: "pointer"
+          }}
+        >
+          ⏱️ Temporary / Guest Account
+        </button>
+        <button
+          type="button"
+          onClick={() => setAccountType("permanent")}
+          style={{
+            padding: "10px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: accountType === "permanent" ? "rgba(34,197,94,0.15)" : "var(--bg-base)",
+            border: `1px solid ${accountType === "permanent" ? "#22c55e" : "var(--border-subtle)"}`,
+            color: accountType === "permanent" ? "#4ade80" : "var(--text-muted)", cursor: "pointer"
+          }}
+        >
+          🛡️ Permanent Account
+        </button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <input
+          type="text"
+          name="username"
+          placeholder="Username (e.g. admin_guest)"
+          required
+          className="input"
+          style={{ background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+        />
+        <input
+          type="email"
+          name="userEmail"
+          placeholder="User Email (guest@ash-tech.app)"
+          required
+          className="input"
+          style={{ background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+        />
+      </div>
+
+      {/* Password with Eye Reveal */}
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+        <input
+          type={showPassword ? "text" : "password"}
+          name="userPassword"
+          placeholder="Account Password (min 6 characters)"
+          required
+          minLength={6}
+          className="input"
+          style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 40px 8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          style={{ position: "absolute", right: 10, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+          title={showPassword ? "Hide password" : "Reveal password"}
+        >
+          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+
+      {/* Expiration Controls for Temporary accounts */}
+      {accountType === "temporary" && (
+        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border-subtle)", padding: 14, borderRadius: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+            <Clock size={14} style={{ color: "#f59e0b" }} /> Time Expiration Setup
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            {[
+              { id: "none", label: "No Expiration" },
+              { id: "preset", label: "Preset Duration" },
+              { id: "custom", label: "Custom (Hrs/Mins/Secs)" },
+            ].map(m => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setExpirationMode(m.id as "none" | "preset" | "custom")}
+                style={{
+                  padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 500,
+                  background: expirationMode === m.id ? "var(--bg-surface-hover)" : "transparent",
+                  border: `1px solid ${expirationMode === m.id ? "var(--border-default)" : "transparent"}`,
+                  color: expirationMode === m.id ? "var(--text-primary)" : "var(--text-muted)",
+                  cursor: "pointer"
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {expirationMode === "preset" && (
+            <select
+              value={presetDuration}
+              onChange={(e) => setPresetDuration(e.target.value)}
+              className="input"
+              style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+            >
+              <option value="1h">1 Hour Temporary Access</option>
+              <option value="6h">6 Hours Access</option>
+              <option value="24h">24 Hours (1 Day) Access</option>
+              <option value="7d">7 Days Access</option>
+              <option value="30d">30 Days Access</option>
+            </select>
+          )}
+
+          {expirationMode === "custom" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              <div>
+                <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block" }}>Hours</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="720"
+                  value={customHours}
+                  onChange={(e) => setCustomHours(e.target.value)}
+                  className="input"
+                  style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 6, padding: "6px 8px", fontSize: 12 }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block" }}>Minutes</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={customMinutes}
+                  onChange={(e) => setCustomMinutes(e.target.value)}
+                  className="input"
+                  style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 6, padding: "6px 8px", fontSize: 12 }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block" }}>Seconds</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={customSeconds}
+                  onChange={(e) => setCustomSeconds(e.target.value)}
+                  className="input"
+                  style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 6, padding: "6px 8px", fontSize: 12 }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Account Status Toggle: Enabled vs Disabled */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {enabled ? <UserCheck size={16} style={{ color: "#4ade80" }} /> : <UserX size={16} style={{ color: "#f87171" }} />}
+          <span style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 500 }}>
+            Account Access Status: <strong style={{ color: enabled ? "#4ade80" : "#f87171" }}>{enabled ? "ENABLED" : "DISABLED"}</strong>
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEnabled(!enabled)}
+          className="btn btn-secondary btn-sm"
+          style={{ fontSize: 12, padding: "4px 10px" }}
+        >
+          Toggle {enabled ? "Disable" : "Enable"}
+        </button>
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn btn-primary btn-sm"
+        style={{ height: 40, justifyContent: "center", marginTop: 4, fontWeight: 600 }}
+      >
+        {loading ? <Loader2 size={16} className="spin" /> : null}
+        {loading ? "Creating Account…" : `Create ${accountType === "permanent" ? "Permanent" : "Temporary"} Account`}
+      </button>
+    </form>
+  );
 }
 
 export default function SettingsClient({ user, entryCount }: SettingsClientProps) {
@@ -275,87 +523,16 @@ export default function SettingsClient({ user, entryCount }: SettingsClientProps
           </div>
         </div>
 
-        {/* Temporary / Guest Account Access */}
+        {/* Account Access & User Management */}
         <div className="settings-section">
           <div className="settings-section-title">Account Access & User Management</div>
           <div className="settings-card">
-            <div className="settings-row-title" style={{ marginBottom: 6 }}>Create Temporary / Guest User</div>
+            <div className="settings-row-title" style={{ marginBottom: 6 }}>Create User Account & Access Control</div>
             <div className="settings-row-desc" style={{ marginBottom: 16 }}>
-              Grant specific users or guests temporary login access to your app with custom username and password.
+              Create Permanent or Temporary / Guest user logins with password reveal options, custom time expiration (Hours, Minutes, Seconds), or Unlimited duration, and enable/disable account access.
             </div>
 
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const email = (form.elements.namedItem("guestEmail") as HTMLInputElement).value;
-                const username = (form.elements.namedItem("guestUsername") as HTMLInputElement).value;
-                const password = (form.elements.namedItem("guestPassword") as HTMLInputElement).value;
-
-                try {
-                  const res = await fetch("/api/users/create", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, username, password }),
-                  });
-                  const json = await res.json();
-                  if (!res.ok) throw new Error(json.error);
-                  alert(`✅ User created successfully!\n\nEmail: ${email}\nUsername: ${username}`);
-                  form.reset();
-                } catch (err: any) {
-                  alert(`❌ Error creating user: ${err.message}`);
-                }
-              }}
-              style={{ display: "flex", flexDirection: "column", gap: 12 }}
-            >
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <input
-                  type="text"
-                  name="guestUsername"
-                  placeholder="Username"
-                  required
-                  className="input"
-                  style={{ background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
-                />
-                <input
-                  type="email"
-                  name="guestEmail"
-                  placeholder="User Email"
-                  required
-                  className="input"
-                  style={{ background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
-                />
-              </div>
-              <input
-                type="password"
-                name="guestPassword"
-                placeholder="Temporary Password (min 6 characters)"
-                required
-                minLength={6}
-                className="input"
-                style={{ background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
-              />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Access Duration Expiration</label>
-                  <select
-                    name="accessDuration"
-                    className="input"
-                    style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
-                  >
-                    <option value="1h">1 Hour Temporary Access</option>
-                    <option value="24h">24 Hours Access</option>
-                    <option value="7d">7 Days Access</option>
-                    <option value="30d">30 Days Access</option>
-                  </select>
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-end" }}>
-                  <button type="submit" className="btn btn-primary btn-sm" style={{ width: "100%", height: 38, justifyContent: "center" }}>
-                    Create Temporary Account
-                  </button>
-                </div>
-              </div>
-            </form>
+            <UserManagementForm />
           </div>
         </div>
 

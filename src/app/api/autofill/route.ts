@@ -49,9 +49,9 @@ export async function POST(request: Request) {
   const activeProvider = body.custom_provider || "groq";
   const customKey = body.custom_api_key?.trim();
 
-  // Check for Groq or Gemini API keys
-  const groqApiKey = (activeProvider === "groq" && customKey) ? customKey : process.env.GROQ_API_KEY;
-  const geminiApiKey = (activeProvider === "gemini" && customKey) ? customKey : process.env.GEMINI_API_KEY;
+  // Try custom key first, fallback to environment keys
+  const groqApiKey = (activeProvider === "groq" && customKey) ? customKey : process.env.GROQ_API_KEY || (customKey?.startsWith("gsk_") ? customKey : undefined);
+  const geminiApiKey = (activeProvider === "gemini" && customKey) ? customKey : process.env.GEMINI_API_KEY || (customKey?.startsWith("AIza") ? customKey : undefined);
 
   if (!groqApiKey && !geminiApiKey) {
     return NextResponse.json(
@@ -84,6 +84,9 @@ export async function POST(request: Request) {
       if (groqRes.ok) {
         const groqData = await groqRes.json();
         rawText = groqData.choices?.[0]?.message?.content ?? "";
+      } else {
+        const errJson = await groqRes.text();
+        console.error("Groq API Error Response:", errJson);
       }
     }
 
