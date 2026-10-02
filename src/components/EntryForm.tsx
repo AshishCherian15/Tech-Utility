@@ -105,11 +105,19 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
   const handleAiAutofill = async () => {
     if (!aiInput.trim()) return;
     setAiLoading(true);
+    const customKey = typeof window !== "undefined" ? localStorage.getItem("ash_custom_ai_key") || undefined : undefined;
+    const customProvider = typeof window !== "undefined" ? localStorage.getItem("ash_ai_provider") || "groq" : "groq";
+
     try {
       const res = await fetch("/api/autofill", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input_type: "text", content: aiInput }),
+        body: JSON.stringify({
+          input_type: "text",
+          content: aiInput,
+          custom_api_key: customKey,
+          custom_provider: customProvider,
+        }),
       });
       const draft = await res.json();
       if (!res.ok) {

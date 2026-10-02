@@ -423,6 +423,14 @@ code, kbd, pre, samp {
   height: 100vh;
   overflow-y: auto;
   flex-shrink: 0;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-collapsed {
+  width: 0px !important;
+  margin-left: -260px;
+  overflow: hidden;
+  border-right: none;
 }
 
 /* ─── Entry grid ────────────────────────────────────────────── */

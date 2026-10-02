@@ -167,62 +167,88 @@ export default function SettingsClient({ user, entryCount }: SettingsClientProps
         <div className="settings-section">
           <div className="settings-section-title">AI Autofill & Model Settings</div>
           <div className="settings-card">
-            <div className="settings-row-title" style={{ marginBottom: 4 }}>Select Active AI Model & Key</div>
+            <div className="settings-row-title" style={{ marginBottom: 4 }}>Select Active AI Model & Saved Keys</div>
             <div className="settings-row-desc" style={{ marginBottom: 16 }}>
-              Configure custom AI models (Groq, Gemini, OpenAI, Claude) and API keys for instant entry drafting.
+              Configure custom AI models (Groq Llama 3.3, Google Gemini 1.5 Flash, OpenAI GPT-4o, Claude 3.5) and reveal/edit saved keys per model.
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
-                  Active Provider
-                </label>
-                <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Groq Key Row */}
+              <div style={{ background: "rgba(255,255,255,0.02)", padding: 14, borderRadius: 10, border: "1px solid var(--border-subtle)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>⚡ Groq (Llama 3.3 70B Versatile)</span>
                   <button
                     type="button"
                     onClick={() => {
                       if (typeof window !== "undefined") localStorage.setItem("ash_ai_provider", "groq");
-                      alert("Active AI Provider set to Groq (Llama 3.3 70B)");
+                      alert("Set active provider to Groq (Llama 3.3 70B)");
                     }}
                     className="btn btn-secondary btn-sm"
-                    style={{ flex: 1, justifyContent: "center" }}
+                    style={{ fontSize: 11, padding: "4px 8px" }}
                   >
-                    ⚡ Groq (Llama 3.3)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined") localStorage.setItem("ash_ai_provider", "gemini");
-                      alert("Active AI Provider set to Google Gemini 1.5 Flash");
-                    }}
-                    className="btn btn-secondary btn-sm"
-                    style={{ flex: 1, justifyContent: "center" }}
-                  >
-                    ✨ Google Gemini
+                    Set Active
                   </button>
                 </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
-                  Custom Groq / Gemini API Key (Optional Override)
-                </label>
-                <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ display: "flex", gap: 8 }}>
                   <input
                     type="password"
-                    placeholder="gsk_... or AIzaSy..."
-                    defaultValue={typeof window !== "undefined" ? localStorage.getItem("ash_custom_ai_key") || "" : ""}
+                    id="groq-key-input"
+                    placeholder="gsk_GttCJR..."
+                    defaultValue={typeof window !== "undefined" ? localStorage.getItem("ash_groq_key") || "gsk_[REDACTED]" : ""}
                     onChange={(e) => {
-                      if (typeof window !== "undefined") localStorage.setItem("ash_custom_ai_key", e.target.value);
+                      if (typeof window !== "undefined") localStorage.setItem("ash_groq_key", e.target.value);
                     }}
                     style={{ flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
                   />
                   <button
                     type="button"
-                    onClick={() => alert("✅ Custom API Key saved locally!")}
-                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      const input = document.getElementById("groq-key-input") as HTMLInputElement;
+                      if (input) input.type = input.type === "password" ? "text" : "password";
+                    }}
+                    className="btn btn-secondary btn-sm"
                   >
-                    Save Key
+                    👁️ Reveal / Hide
+                  </button>
+                </div>
+              </div>
+
+              {/* Gemini Key Row */}
+              <div style={{ background: "rgba(255,255,255,0.02)", padding: 14, borderRadius: 10, border: "1px solid var(--border-subtle)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>✨ Google Gemini (Gemini 1.5 Flash)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") localStorage.setItem("ash_ai_provider", "gemini");
+                      alert("Set active provider to Google Gemini 1.5 Flash");
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 11, padding: "4px 8px" }}
+                  >
+                    Set Active
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="password"
+                    id="gemini-key-input"
+                    placeholder="AIzaSy..."
+                    defaultValue={typeof window !== "undefined" ? localStorage.getItem("ash_gemini_key") || "" : ""}
+                    onChange={(e) => {
+                      if (typeof window !== "undefined") localStorage.setItem("ash_gemini_key", e.target.value);
+                    }}
+                    style={{ flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById("gemini-key-input") as HTMLInputElement;
+                      if (input) input.type = input.type === "password" ? "text" : "password";
+                    }}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    👁️ Reveal / Hide
                   </button>
                 </div>
               </div>
@@ -309,9 +335,26 @@ export default function SettingsClient({ user, entryCount }: SettingsClientProps
                 className="input"
                 style={{ background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
               />
-              <button type="submit" className="btn btn-primary btn-sm" style={{ alignSelf: "flex-start", marginTop: 4 }}>
-                Create Access Account
-              </button>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Access Duration Expiration</label>
+                  <select
+                    name="accessDuration"
+                    className="input"
+                    style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+                  >
+                    <option value="1h">1 Hour Temporary Access</option>
+                    <option value="24h">24 Hours Access</option>
+                    <option value="7d">7 Days Access</option>
+                    <option value="30d">30 Days Access</option>
+                  </select>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-end" }}>
+                  <button type="submit" className="btn btn-primary btn-sm" style={{ width: "100%", height: 38, justifyContent: "center" }}>
+                    Create Temporary Account
+                  </button>
+                </div>
+              </div>
             </form>
           </div>
         </div>

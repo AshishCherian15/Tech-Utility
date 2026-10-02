@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { input_type?: string; content?: string };
+  let body: { input_type?: string; content?: string; custom_api_key?: string; custom_provider?: string };
   try {
     body = await request.json();
   } catch {
@@ -46,13 +46,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "content is required" }, { status: 400 });
   }
 
+  const activeProvider = body.custom_provider || "groq";
+  const customKey = body.custom_api_key?.trim();
+
   // Check for Groq or Gemini API keys
-  const groqApiKey = process.env.GROQ_API_KEY;
-  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const groqApiKey = (activeProvider === "groq" && customKey) ? customKey : process.env.GROQ_API_KEY;
+  const geminiApiKey = (activeProvider === "gemini" && customKey) ? customKey : process.env.GEMINI_API_KEY;
 
   if (!groqApiKey && !geminiApiKey) {
     return NextResponse.json(
-      { error: "AI autofill is not configured (no API key). Fill the form manually." },
+      { error: "AI autofill is not configured (no API key). Fill the form manually or set API key in Settings." },
       { status: 503 }
     );
   }

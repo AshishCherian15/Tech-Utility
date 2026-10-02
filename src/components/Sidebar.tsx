@@ -49,14 +49,14 @@ export default function Sidebar({ user }: SidebarProps) {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div className="sidebar-logo">
-        <div className="sidebar-logo-icon" style={{ padding: 2, background: "transparent", boxShadow: "none" }}>
+      <div className="sidebar-logo" style={{ padding: "16px", gap: 14 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, overflow: "hidden", background: "rgba(59,130,246,0.1)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Ash-Tech Logo" style={{ width: "100%", height: "100%", borderRadius: 8, objectFit: "contain" }} />
+          <img src="/logo.png" alt="Ash-Tech Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
         </div>
         <div>
-          <div className="sidebar-logo-name">Ash-Tech</div>
-          <div className="sidebar-logo-sub">Tech Memory</div>
+          <div className="sidebar-logo-name" style={{ fontSize: 18, fontWeight: 800 }}>Ash-Tech</div>
+          <div className="sidebar-logo-sub" style={{ fontSize: 12 }}>Tech Memory</div>
         </div>
       </div>
 

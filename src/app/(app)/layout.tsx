@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import Sidebar from "@/components/Sidebar";
-import MobileNav from "@/components/MobileNav";
-import AppShellClient from "@/components/AppShellClient";
+import ShellLayout from "@/components/ShellLayout";
 
 export default async function AppLayout({
   children,
@@ -27,15 +25,8 @@ export default async function AppLayout({
     .limit(500);
 
   return (
-    <div className="app-shell">
-      <Sidebar user={user} />
-      <div className="main-content">
-        <MobileNav user={user} />
-        <main style={{ flex: 1, minWidth: 0 }}>
-          {children}
-        </main>
-      </div>
-      <AppShellClient entries={entries ?? []} />
-    </div>
+    <ShellLayout user={user} entries={entries ?? []}>
+      {children}
+    </ShellLayout>
   );
 }
