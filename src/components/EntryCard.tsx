@@ -97,15 +97,20 @@ export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
         <span className="entry-card-time">{formatRelativeDate(entry.created_at)}</span>
       </div>
 
-      {/* Image strip */}
+      {/* Xiaomi Notes style top image preview */}
       {entry.images && entry.images.length > 0 && (
-        <div className="entry-card-img-strip">
+        <div style={{ margin: "-16px -16px 4px -16px", height: 130, overflow: "hidden", borderBottom: "1px solid var(--border-card)", position: "relative" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={entry.images[0]}
-            alt=""
-            style={{ width: "100%", height: 80, objectFit: "cover" }}
+            alt={entry.title}
+            style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s ease" }}
           />
+          {entry.url && (
+            <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", padding: "4px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#fff" }}>
+              <ExternalLink size={10} /> Link
+            </div>
+          )}
         </div>
       )}
 

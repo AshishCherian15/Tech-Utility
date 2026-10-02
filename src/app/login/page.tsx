@@ -74,11 +74,9 @@ export default function LoginPage() {
       <div className="login-container">
         {/* Logo & brand */}
         <div className="login-brand">
-          <div className="login-logo">
-            <span className="login-logo-letter">A</span>
-            <div className="login-logo-circuit">
-              <span /><span /><span />
-            </div>
+          <div className="login-logo" style={{ background: "transparent", boxShadow: "none" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Ash-Tech Logo" style={{ width: "100%", height: "100%", borderRadius: 16, objectFit: "contain" }} />
           </div>
           <div className="login-brand-text">
             <h1 className="login-title">Ash-Tech</h1>

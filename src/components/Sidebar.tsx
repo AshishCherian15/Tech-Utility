@@ -50,8 +50,9 @@ export default function Sidebar({ user }: SidebarProps) {
     <aside className="sidebar">
       {/* Logo */}
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">
-          <span>A</span>
+        <div className="sidebar-logo-icon" style={{ padding: 2, background: "transparent", boxShadow: "none" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Ash-Tech Logo" style={{ width: "100%", height: "100%", borderRadius: 8, objectFit: "contain" }} />
         </div>
         <div>
           <div className="sidebar-logo-name">Ash-Tech</div>

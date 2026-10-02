@@ -163,6 +163,73 @@ export default function SettingsClient({ user, entryCount }: SettingsClientProps
           </div>
         </div>
 
+        {/* AI Model & API Key Configuration */}
+        <div className="settings-section">
+          <div className="settings-section-title">AI Autofill & Model Settings</div>
+          <div className="settings-card">
+            <div className="settings-row-title" style={{ marginBottom: 4 }}>Select Active AI Model & Key</div>
+            <div className="settings-row-desc" style={{ marginBottom: 16 }}>
+              Configure custom AI models (Groq, Gemini, OpenAI, Claude) and API keys for instant entry drafting.
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+                  Active Provider
+                </label>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") localStorage.setItem("ash_ai_provider", "groq");
+                      alert("Active AI Provider set to Groq (Llama 3.3 70B)");
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ flex: 1, justifyContent: "center" }}
+                  >
+                    ⚡ Groq (Llama 3.3)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") localStorage.setItem("ash_ai_provider", "gemini");
+                      alert("Active AI Provider set to Google Gemini 1.5 Flash");
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ flex: 1, justifyContent: "center" }}
+                  >
+                    ✨ Google Gemini
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+                  Custom Groq / Gemini API Key (Optional Override)
+                </label>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <input
+                    type="password"
+                    placeholder="gsk_... or AIzaSy..."
+                    defaultValue={typeof window !== "undefined" ? localStorage.getItem("ash_custom_ai_key") || "" : ""}
+                    onChange={(e) => {
+                      if (typeof window !== "undefined") localStorage.setItem("ash_custom_ai_key", e.target.value);
+                    }}
+                    style={{ flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => alert("✅ Custom API Key saved locally!")}
+                    className="btn btn-primary btn-sm"
+                  >
+                    Save Key
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Security */}
         <div className="settings-section">
           <div className="settings-section-title">Security</div>
