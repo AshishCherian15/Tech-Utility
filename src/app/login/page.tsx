@@ -107,29 +107,73 @@ export default function LoginPage({
     setError(null);
     try {
       console.log(`Starting OAuth sign-in with ${provider}...`);
+
+      // Use window.open for popup-based OAuth
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnPath)}`,
-          skipBrowserRedirect: false,
+          skipBrowserRedirect: true,
         },
       });
+
       if (error) {
         console.error('OAuth error:', error);
         setError(`Could not start sign-in with ${provider}. ${error.message}`);
         setLoading(null);
-      } else {
-        console.log('OAuth started, waiting for redirect...');
-        // Supabase will handle the redirect automatically
-        // If it doesn't redirect within 5 seconds, show error
-        setTimeout(() => {
-          if (loading === provider) {
-            console.error('OAuth redirect timeout');
-            setError("OAuth redirect took too long. Check your browser settings or try a different sign-in method.");
-            setLoading(null);
-          }
-        }, 5000);
+        return;
       }
+
+      if (!data.url) {
+        console.error('No OAuth URL returned');
+        setError("Could not start sign-in. No OAuth URL returned.");
+        setLoading(null);
+        return;
+      }
+
+      console.log('OAuth URL generated:', data.url);
+
+      // Open OAuth in a popup window
+      const width = 500;
+      const height = 600;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+      const popup = window.open(
+        data.url,
+        'OAuth Sign In',
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+
+      if (!popup) {
+        console.error('Popup blocked');
+        setError("Popup was blocked. Please allow popups for this site and try again.");
+        setLoading(null);
+        return;
+      }
+
+      console.log('Popup opened successfully');
+
+      // Poll for popup closure
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          console.log('Popup closed, reloading page');
+          setLoading(null);
+          // Reload to check if session was established
+          window.location.reload();
+        }
+      }, 1000);
+
+      // Timeout after 2 minutes
+      setTimeout(() => {
+        clearInterval(checkClosed);
+        if (!popup.closed) {
+          popup.close();
+          setLoading(null);
+          setError("OAuth took too long. Please try again.");
+        }
+      }, 120000);
+
     } catch (err) {
       console.error('OAuth exception:', err);
       setError("Could not start sign-in. Check your connection and try again.");
