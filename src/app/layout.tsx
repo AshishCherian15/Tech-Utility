@@ -3,6 +3,7 @@ import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
 import NavigationHistory from "@/components/NavigationHistory";
 import { AIConfigProvider } from "@/components/AIConfigProvider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const deploymentUrl =
   process.env.NEXT_PUBLIC_APP_URL ??
@@ -56,6 +57,7 @@ export default function RootLayout({
         <ToastProvider>
           <AIConfigProvider>{children}</AIConfigProvider>
         </ToastProvider>
+        <SpeedInsights />
       </body>
     </html>
   );

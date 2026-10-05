@@ -32,9 +32,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
   const isOwner = Boolean(user.email && ownerEmail && user.email.toLowerCase() === ownerEmail);
-  const canCreateEntries = user.app_metadata?.can_create_entries === true || isOwner;
+  const canEditDeleteEntries = user.app_metadata?.can_edit_delete_entries === true || isOwner;
 
-  // Allow editing if user owns the entry OR is owner
+  // Allow editing if user owns the entry AND has edit permission OR is owner
   const { data: existing, error: existingError } = await supabase
     .from("entries")
     .select("id, user_id")
@@ -47,6 +47,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   if (existing.user_id !== user.id && !isOwner) {
     return NextResponse.json({ error: "You can only edit your own entries" }, { status: 403 });
+  }
+
+  if (existing.user_id === user.id && !canEditDeleteEntries) {
+    return NextResponse.json({ error: "You do not have permission to edit entries" }, { status: 403 });
   }
 
   let body: unknown;
@@ -104,6 +108,7 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
 
   const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
   const isOwner = Boolean(user.email && ownerEmail && user.email.toLowerCase() === ownerEmail);
+  const canEditDeleteEntries = user.app_metadata?.can_edit_delete_entries === true || isOwner;
 
   // Check ownership - owner can delete any entry
   const { data: existing, error: existingError } = await supabase
@@ -118,6 +123,10 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
 
   if (existing.user_id !== user.id && !isOwner) {
     return NextResponse.json({ error: "You can only delete your own entries" }, { status: 403 });
+  }
+
+  if (existing.user_id === user.id && !canEditDeleteEntries) {
+    return NextResponse.json({ error: "You do not have permission to delete entries" }, { status: 403 });
   }
 
   // Soft delete only — set deleted_at

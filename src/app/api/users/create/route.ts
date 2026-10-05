@@ -17,6 +17,7 @@ const accountSchema = z.object({
   duration: z.string().regex(/^(none|[1-9]\d{0,6}[hds])$/),
   enabled: z.boolean(),
   can_create_entries: z.boolean().optional(),
+  can_edit_delete_entries: z.boolean().optional(),
 }).refine(
   (account) => account.account_type === "permanent" || account.duration !== "none",
   { message: "Temporary accounts must have an expiration", path: ["duration"] },
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
         enabled: account.enabled,
         expires_at: expiresAt,
         can_create_entries: account.can_create_entries !== undefined ? account.can_create_entries : true,
+        can_edit_delete_entries: account.can_edit_delete_entries !== undefined ? account.can_edit_delete_entries : true,
       },
     });
 

@@ -24,6 +24,7 @@ const updateSchema = z.discriminatedUnion("action", [
     email: z.string().email().max(320).optional(),
     password: z.string().min(12).max(128).regex(/^(?=.*\d)(?=.*[^A-Za-z0-9]).+$/).optional(),
     can_create_entries: z.boolean().optional(),
+    can_edit_delete_entries: z.boolean().optional(),
   }),
 ]);
 
@@ -85,6 +86,7 @@ export async function GET() {
             !Number.isFinite(Date.parse(account.app_metadata.expires_at)) ||
             Date.parse(account.app_metadata.expires_at) <= Date.now()),
         canCreateEntries: account.app_metadata.can_create_entries === true,
+        canEditDeleteEntries: account.app_metadata.can_edit_delete_entries === true,
       }];
     });
 
@@ -155,15 +157,18 @@ export async function PATCH(request: Request) {
     }
 
     if (parsed.data.action === "update") {
-      const updateData: { user_metadata?: { username?: string }; password?: string; app_metadata?: { can_create_entries?: boolean } } = {};
+      const updateData: { user_metadata?: { username?: string }; password?: string; app_metadata?: { can_create_entries?: boolean; can_edit_delete_entries?: boolean } } = {};
       if (parsed.data.username) {
         updateData.user_metadata = { username: parsed.data.username };
       }
       if (parsed.data.password) {
         updateData.password = parsed.data.password;
       }
-      if (parsed.data.can_create_entries !== undefined) {
-        updateData.app_metadata = { can_create_entries: parsed.data.can_create_entries };
+      if (parsed.data.can_create_entries !== undefined || parsed.data.can_edit_delete_entries !== undefined) {
+        updateData.app_metadata = {
+          ...(parsed.data.can_create_entries !== undefined ? { can_create_entries: parsed.data.can_create_entries } : {}),
+          ...(parsed.data.can_edit_delete_entries !== undefined ? { can_edit_delete_entries: parsed.data.can_edit_delete_entries } : {}),
+        };
       }
 
       const { data, error } = await admin.auth.admin.updateUserById(account.id, updateData);
@@ -181,6 +186,7 @@ export async function PATCH(request: Request) {
               : data.user.email?.split("@")[0] ?? "Invited user",
             email: data.user.email ?? "",
             canCreateEntries: data.user.app_metadata?.can_create_entries === true,
+            canEditDeleteEntries: data.user.app_metadata?.can_edit_delete_entries === true,
           },
         },
         { headers: { "Cache-Control": "private, no-store" } },
