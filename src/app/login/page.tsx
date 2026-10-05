@@ -59,16 +59,20 @@ export default function LoginPage({
     setLoading("email");
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Attempting email/password sign-in:', email.trim());
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
       if (error) {
-        setError("Sign-in failed. Check your email and password, or request a password reset.");
+        console.error('Email auth error:', error);
+        setError(`Sign-in failed: ${error.message}`);
       } else {
+        console.log('Email auth successful', data);
         router.replace(returnPath);
       }
-    } catch {
+    } catch (err) {
+      console.error('Email auth exception:', err);
       setError("Sign-in failed. Please try again.");
     } finally {
       setLoading(null);
@@ -108,12 +112,10 @@ export default function LoginPage({
     try {
       console.log(`Starting OAuth sign-in with ${provider}...`);
 
-      // Use window.open for popup-based OAuth
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnPath)}`,
-          skipBrowserRedirect: true,
         },
       });
 
@@ -124,55 +126,9 @@ export default function LoginPage({
         return;
       }
 
-      if (!data.url) {
-        console.error('No OAuth URL returned');
-        setError("Could not start sign-in. No OAuth URL returned.");
-        setLoading(null);
-        return;
-      }
-
-      console.log('OAuth URL generated:', data.url);
-
-      // Open OAuth in a popup window
-      const width = 500;
-      const height = 600;
-      const left = (window.screen.width - width) / 2;
-      const top = (window.screen.height - height) / 2;
-      const popup = window.open(
-        data.url,
-        'OAuth Sign In',
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-      );
-
-      if (!popup) {
-        console.error('Popup blocked');
-        setError("Popup was blocked. Please allow popups for this site and try again.");
-        setLoading(null);
-        return;
-      }
-
-      console.log('Popup opened successfully');
-
-      // Poll for popup closure
-      const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkClosed);
-          console.log('Popup closed, reloading page');
-          setLoading(null);
-          // Reload to check if session was established
-          window.location.reload();
-        }
-      }, 1000);
-
-      // Timeout after 2 minutes
-      setTimeout(() => {
-        clearInterval(checkClosed);
-        if (!popup.closed) {
-          popup.close();
-          setLoading(null);
-          setError("OAuth took too long. Please try again.");
-        }
-      }, 120000);
+      console.log('OAuth started successfully');
+      // Supabase will handle the redirect automatically
+      // Loading state will remain until redirect happens
 
     } catch (err) {
       console.error('OAuth exception:', err);
