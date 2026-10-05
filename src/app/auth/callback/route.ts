@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   console.log('OAuth callback:', {
     hasCode: !!code,
-    errorDesc,
+    error_desc,
     requestedNext,
     origin,
   });
