@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/components/Toast";
 import BrandMark from "@/components/BrandMark";
 
@@ -42,7 +42,7 @@ export default function Sidebar({ user, isOwner }: SidebarProps) {
   const pathname = usePathname();
   const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const { error: toastError } = useToast();
 
   const handleSignOut = async () => {
