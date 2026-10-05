@@ -16,6 +16,7 @@ const accountSchema = z.object({
   account_type: z.enum(["permanent", "temporary"]),
   duration: z.string().regex(/^(none|[1-9]\d{0,6}[hds])$/),
   enabled: z.boolean(),
+  can_create_entries: z.boolean().optional(),
 }).refine(
   (account) => account.account_type === "permanent" || account.duration !== "none",
   { message: "Temporary accounts must have an expiration", path: ["duration"] },
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
         account_type: account.account_type,
         enabled: account.enabled,
         expires_at: expiresAt,
+        can_create_entries: account.can_create_entries !== undefined ? account.can_create_entries : true,
       },
     });
 
@@ -93,8 +95,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Account created but could not verify" }, { status: 500 });
     }
 
-    // If password wasn't set, update it
-    if (!updatedUser.user.encrypted_password) {
+    // If password wasn't set, update it (Supabase sometimes doesn't set password during createUser)
+    // We check by attempting to verify the password via signInWithPassword
+    const { error: signInError } = await admin.auth.signInWithPassword({
+      email: account.email,
+      password: account.password,
+    });
+
+    if (signInError) {
       console.log("Password not set during creation, updating manually...");
       const { error: passwordError } = await admin.auth.admin.updateUserById(data.user.id, {
         password: account.password,

@@ -30,6 +30,25 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
+  const isOwner = Boolean(user.email && ownerEmail && user.email.toLowerCase() === ownerEmail);
+  const canCreateEntries = user.app_metadata?.can_create_entries === true || isOwner;
+
+  // Allow editing if user owns the entry OR is owner
+  const { data: existing, error: existingError } = await supabase
+    .from("entries")
+    .select("id, user_id")
+    .eq("id", id)
+    .single();
+
+  if (existingError || !existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (existing.user_id !== user.id && !isOwner) {
+    return NextResponse.json({ error: "You can only edit your own entries" }, { status: 403 });
+  }
+
   let body: unknown;
   try {
     body = await readEntryJson(request);
@@ -45,20 +64,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Invalid entry updates", details: parsed.error.issues }, { status: 400 });
   }
   const changes = parsed.data;
-
-  // Verify ownership
-  const { data: existing, error: existingError } = await supabase
-    .from("entries")
-    .select("id")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
-
-  if (existingError) {
-    console.error("Entry ownership check failed:", existingError.message);
-    return NextResponse.json({ error: "Could not verify entry access" }, { status: 500 });
-  }
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (changes.category_id) {
     const { data: category, error: categoryError } = await supabase
@@ -97,12 +102,29 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
+  const isOwner = Boolean(user.email && ownerEmail && user.email.toLowerCase() === ownerEmail);
+
+  // Check ownership - owner can delete any entry
+  const { data: existing, error: existingError } = await supabase
+    .from("entries")
+    .select("id, user_id")
+    .eq("id", id)
+    .single();
+
+  if (existingError || !existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (existing.user_id !== user.id && !isOwner) {
+    return NextResponse.json({ error: "You can only delete your own entries" }, { status: 403 });
+  }
+
   // Soft delete only — set deleted_at
   const { data, error } = await supabase
     .from("entries")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("user_id", user.id)
     .select("id")
     .maybeSingle();
 

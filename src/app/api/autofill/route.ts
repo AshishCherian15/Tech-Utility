@@ -370,7 +370,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: promptFor() },
+            { role: "system", content: promptFor(input.category_names) },
             { role: "user", content: JSON.stringify({ source_text: input.content }) },
           ],
         }),

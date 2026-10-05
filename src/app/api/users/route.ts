@@ -23,6 +23,7 @@ const updateSchema = z.discriminatedUnion("action", [
     username: z.string().trim().min(1).max(64).optional(),
     email: z.string().email().max(320).optional(),
     password: z.string().min(12).max(128).regex(/^(?=.*\d)(?=.*[^A-Za-z0-9]).+$/).optional(),
+    can_create_entries: z.boolean().optional(),
   }),
 ]);
 
@@ -83,6 +84,7 @@ export async function GET() {
           (typeof account.app_metadata.expires_at !== "string" ||
             !Number.isFinite(Date.parse(account.app_metadata.expires_at)) ||
             Date.parse(account.app_metadata.expires_at) <= Date.now()),
+        canCreateEntries: account.app_metadata.can_create_entries === true,
       }];
     });
 
@@ -153,12 +155,15 @@ export async function PATCH(request: Request) {
     }
 
     if (parsed.data.action === "update") {
-      const updateData: { user_metadata?: { username?: string }; password?: string } = {};
+      const updateData: { user_metadata?: { username?: string }; password?: string; app_metadata?: { can_create_entries?: boolean } } = {};
       if (parsed.data.username) {
         updateData.user_metadata = { username: parsed.data.username };
       }
       if (parsed.data.password) {
         updateData.password = parsed.data.password;
+      }
+      if (parsed.data.can_create_entries !== undefined) {
+        updateData.app_metadata = { can_create_entries: parsed.data.can_create_entries };
       }
 
       const { data, error } = await admin.auth.admin.updateUserById(account.id, updateData);
@@ -175,6 +180,7 @@ export async function PATCH(request: Request) {
               ? data.user.user_metadata.username
               : data.user.email?.split("@")[0] ?? "Invited user",
             email: data.user.email ?? "",
+            canCreateEntries: data.user.app_metadata?.can_create_entries === true,
           },
         },
         { headers: { "Cache-Control": "private, no-store" } },

@@ -75,6 +75,14 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
+  const isOwner = Boolean(user.email && ownerEmail && user.email.toLowerCase() === ownerEmail);
+  const canCreateEntries = user.app_metadata?.can_create_entries === true || isOwner;
+
+  if (!canCreateEntries) {
+    return NextResponse.json({ error: "You do not have permission to create entries" }, { status: 403 });
+  }
+
   let body: unknown;
   try {
     body = await readEntryJson(request);

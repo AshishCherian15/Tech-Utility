@@ -24,6 +24,7 @@ interface ManagedAccount {
   enabled: boolean;
   expiresAt: string | null;
   expired: boolean;
+  canCreateEntries: boolean;
 }
 
 interface EditingAccount {
@@ -32,6 +33,7 @@ interface EditingAccount {
   email: string;
   password: string;
   showPassword: boolean;
+  canCreateEntries: boolean;
 }
 
 const accountListSchema = z.object({
@@ -43,6 +45,7 @@ const accountListSchema = z.object({
     enabled: z.boolean(),
     expiresAt: z.string().nullable(),
     expired: z.boolean(),
+    canCreateEntries: z.boolean().optional(),
   })),
   truncated: z.boolean(),
 });
@@ -56,6 +59,7 @@ function UserManagementForm({ onCreated }: { onCreated: () => void }) {
   const [customMinutes, setCustomMinutes] = useState("30");
   const [customSeconds, setCustomSeconds] = useState("0");
   const [enabled, setEnabled] = useState(true);
+  const [canCreateEntries, setCanCreateEntries] = useState(true);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null);
   const [expirationError, setExpirationError] = useState<string | null>(null);
@@ -105,6 +109,7 @@ function UserManagementForm({ onCreated }: { onCreated: () => void }) {
           account_type: accountType,
           duration: durationString,
           enabled,
+          can_create_entries: canCreateEntries,
         }),
       });
       const json = await res.json();
@@ -350,6 +355,25 @@ function UserManagementForm({ onCreated }: { onCreated: () => void }) {
         </button>
       </div>
 
+      {/* Entry Creation Permission Toggle */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Globe size={16} style={{ color: canCreateEntries ? "#4ade80" : "#94a3b8" }} />
+          <span style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 500 }}>
+            Can Create Entries: <strong style={{ color: canCreateEntries ? "#4ade80" : "#94a3b8" }}>{canCreateEntries ? "YES" : "NO"}</strong>
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCanCreateEntries(!canCreateEntries)}
+          className="btn btn-secondary btn-sm"
+          aria-pressed={canCreateEntries}
+          style={{ fontSize: 12, padding: "4px 10px" }}
+        >
+          {canCreateEntries ? "Revoke" : "Grant"}
+        </button>
+      </div>
+
       <button
         type="submit"
         disabled={loading}
@@ -466,6 +490,7 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
       email: account.email,
       password: "",
       showPassword: false,
+      canCreateEntries: account.canCreateEntries,
     });
     setEditFeedback(null);
   };
@@ -483,7 +508,7 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
     setEditFeedback(null);
 
     try {
-      const body: { action: string; userId: string; username?: string; email?: string; password?: string } = {
+      const body: { action: string; userId: string; username?: string; email?: string; password?: string; can_create_entries?: boolean } = {
         action: "update",
         userId: editingAccount.account.id,
       };
@@ -496,6 +521,9 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
       }
       if (editingAccount.password) {
         body.password = editingAccount.password;
+      }
+      if (editingAccount.canCreateEntries !== editingAccount.account.canCreateEntries) {
+        body.can_create_entries = editingAccount.canCreateEntries;
       }
 
       const response = await fetch("/api/users", {
@@ -515,12 +543,13 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
           id: z.string(),
           username: z.string(),
           email: z.string(),
+          canCreateEntries: z.boolean().optional(),
         }),
       }).parse(result);
 
       setAccounts((current) => current.map((item) =>
         item.id === editingAccount.account.id
-          ? { ...item, username: updated.user.username, email: updated.user.email }
+          ? { ...item, username: updated.user.username, email: updated.user.email, canCreateEntries: updated.user.canCreateEntries ?? item.canCreateEntries }
           : item
       ));
 
@@ -577,6 +606,7 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
                     {account.accountType === "temporary" ? "Temporary" : "Permanent"}
                     {account.expiresAt && Number.isFinite(expiryTime) ? ` · Expires ${new Date(account.expiresAt).toLocaleString()}` : ""}
                     {expired ? " · Expired" : account.enabled ? " · Enabled" : " · Disabled"}
+                    {` · ${account.canCreateEntries ? "Can create entries" : "Cannot create entries"}`}
                   </div>
                   {expired && (
                     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 8 }}>
@@ -741,6 +771,24 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
                     Password must be 12+ characters with a number and symbol
                   </p>
                 )}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Globe size={16} style={{ color: editingAccount.canCreateEntries ? "#4ade80" : "#94a3b8" }} />
+                  <span style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 500 }}>
+                    Can Create Entries
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingAccount({ ...editingAccount, canCreateEntries: !editingAccount.canCreateEntries })}
+                  className="btn btn-secondary btn-sm"
+                  aria-pressed={editingAccount.canCreateEntries}
+                  style={{ fontSize: 12, padding: "4px 10px" }}
+                >
+                  {editingAccount.canCreateEntries ? "Yes" : "No"}
+                </button>
               </div>
 
               {editFeedback && (
