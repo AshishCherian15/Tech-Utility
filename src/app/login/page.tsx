@@ -60,17 +60,46 @@ export default function LoginPage({
     setError(null);
     try {
       console.log('Attempting email/password sign-in:', email.trim());
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (error) {
-        console.error('Email auth error:', error);
-        setError(`Sign-in failed: ${error.message}`);
-      } else {
-        console.log('Email auth successful', data);
-        router.replace(returnPath);
+
+      // Use direct fetch instead of Supabase client to avoid library issues
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=password`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email.trim(),
+            password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Email auth error:', data);
+        setError(`Sign-in failed: ${data.error_description || data.message || 'Unknown error'}`);
+        return;
       }
+
+      console.log('Email auth successful', data);
+
+      // Set the session using Supabase client
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+
+      if (sessionError) {
+        console.error('Session set error:', sessionError);
+        setError('Login successful but session setup failed. Please try again.');
+        return;
+      }
+
+      router.replace(returnPath);
     } catch (err) {
       console.error('Email auth exception:', err);
       setError("Sign-in failed. Please try again.");
