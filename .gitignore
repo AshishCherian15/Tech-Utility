@@ -66,3 +66,4 @@ cypress/videos/
 .cache/
 tmp/
 temp/
+/supabase/.temp/
