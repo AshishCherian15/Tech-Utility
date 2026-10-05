@@ -24,7 +24,7 @@ interface ManagedAccount {
   enabled: boolean;
   expiresAt: string | null;
   expired: boolean;
-  canCreateEntries: boolean;
+  canCreateEntries: boolean | undefined;
 }
 
 interface EditingAccount {
@@ -490,7 +490,7 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
       email: account.email,
       password: "",
       showPassword: false,
-      canCreateEntries: account.canCreateEntries,
+      canCreateEntries: account.canCreateEntries ?? true,
     });
     setEditFeedback(null);
   };
@@ -606,7 +606,7 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
                     {account.accountType === "temporary" ? "Temporary" : "Permanent"}
                     {account.expiresAt && Number.isFinite(expiryTime) ? ` · Expires ${new Date(account.expiresAt).toLocaleString()}` : ""}
                     {expired ? " · Expired" : account.enabled ? " · Enabled" : " · Disabled"}
-                    {` · ${account.canCreateEntries ? "Can create entries" : "Cannot create entries"}`}
+                    {` · ${account.canCreateEntries !== false ? "Can create entries" : "Cannot create entries"}`}
                   </div>
                   {expired && (
                     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 8 }}>
