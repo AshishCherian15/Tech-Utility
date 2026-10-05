@@ -6,6 +6,41 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- App access is stored in trusted Supabase app_metadata by the owner-only
+-- admin endpoint. RLS must reject users who can authenticate but were not
+-- explicitly provisioned for this private app.
+CREATE OR REPLACE FUNCTION public.has_active_account()
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT COALESCE(
+    u.raw_app_meta_data -> 'enabled' = 'true'::JSONB
+    AND (
+      (u.raw_app_meta_data ->> 'role' = 'owner'
+        AND u.raw_app_meta_data ->> 'account_type' = 'permanent')
+      OR
+      (u.raw_app_meta_data ->> 'role' = 'permanent_user'
+        AND u.raw_app_meta_data ->> 'account_type' = 'permanent')
+      OR
+      (u.raw_app_meta_data ->> 'role' = 'guest_access'
+        AND u.raw_app_meta_data ->> 'account_type' = 'temporary'
+        AND NULLIF(u.raw_app_meta_data ->> 'expires_at', '') IS NOT NULL)
+    )
+    AND (
+      NULLIF(u.raw_app_meta_data ->> 'expires_at', '') IS NULL
+      OR (u.raw_app_meta_data ->> 'expires_at')::TIMESTAMPTZ > NOW()
+    ),
+    FALSE
+  )
+  FROM auth.users AS u
+  WHERE u.id = auth.uid();
+$$;
+REVOKE ALL ON FUNCTION public.has_active_account() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.has_active_account() TO anon, authenticated;
+
 -- ----------------------------------------------------------------
 -- 1. Categories
 -- ----------------------------------------------------------------
@@ -22,8 +57,10 @@ CREATE TABLE IF NOT EXISTS categories (
 
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "categories: owner full access" ON categories;
 CREATE POLICY "categories: owner full access" ON categories
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  FOR ALL USING (auth.uid() = user_id AND public.has_active_account())
+  WITH CHECK (auth.uid() = user_id AND public.has_active_account());
 
 CREATE INDEX IF NOT EXISTS categories_user_id_idx ON categories(user_id);
 
@@ -55,22 +92,54 @@ CREATE TABLE IF NOT EXISTS entries (
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  -- Full-text search vector (generated, auto-updated)
-  search_vector    TSVECTOR GENERATED ALWAYS AS (
-    TO_TSVECTOR('english',
-      COALESCE(title, '') || ' ' ||
-      COALESCE(ARRAY_TO_STRING(tags, ' '), '') || ' ' ||
-      COALESCE(command_snippet, '') || ' ' ||
-      COALESCE(what_it_is, '') || ' ' ||
-      COALESCE(why_useful, '')
-    )
-  ) STORED
+  search_vector    TSVECTOR NOT NULL DEFAULT ''::TSVECTOR
 );
+
+ALTER TABLE entries
+  ADD COLUMN IF NOT EXISTS search_vector TSVECTOR NOT NULL DEFAULT ''::TSVECTOR;
+
+CREATE OR REPLACE FUNCTION public.set_entry_search_vector()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  NEW.search_vector := TO_TSVECTOR('english'::REGCONFIG,
+    COALESCE(NEW.title, '') || ' ' ||
+    COALESCE(ARRAY_TO_STRING(NEW.tags, ' '), '') || ' ' ||
+    COALESCE(NEW.command_snippet, '') || ' ' ||
+    COALESCE(NEW.what_it_is, '') || ' ' ||
+    COALESCE(NEW.why_useful, '')
+  );
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS entries_search_vector_update ON entries;
+CREATE TRIGGER entries_search_vector_update
+  BEFORE INSERT OR UPDATE ON entries
+  FOR EACH ROW EXECUTE FUNCTION public.set_entry_search_vector();
 
 ALTER TABLE entries ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "entries: owner full access" ON entries;
 CREATE POLICY "entries: owner full access" ON entries
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  FOR ALL USING (
+    auth.uid() = user_id AND
+    public.has_active_account()
+  )
+  WITH CHECK (
+    auth.uid() = user_id AND
+    public.has_active_account() AND
+    (
+      category_id IS NULL OR EXISTS (
+        SELECT 1
+        FROM public.categories AS c
+        WHERE c.id = entries.category_id
+          AND c.user_id = auth.uid()
+      )
+    )
+  );
 
 CREATE INDEX IF NOT EXISTS entries_user_id_idx        ON entries(user_id);
 CREATE INDEX IF NOT EXISTS entries_category_id_idx    ON entries(category_id);
@@ -96,8 +165,28 @@ CREATE TABLE IF NOT EXISTS entry_links (
 
 ALTER TABLE entry_links ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "entry_links: owner full access" ON entry_links;
 CREATE POLICY "entry_links: owner full access" ON entry_links
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  FOR ALL USING (
+    auth.uid() = user_id AND
+    public.has_active_account() AND
+    EXISTS (
+      SELECT 1
+      FROM public.entries AS e
+      WHERE e.id = entry_links.entry_id
+        AND e.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    auth.uid() = user_id AND
+    public.has_active_account() AND
+    EXISTS (
+      SELECT 1
+      FROM public.entries AS e
+      WHERE e.id = entry_links.entry_id
+        AND e.user_id = auth.uid()
+    )
+  );
 
 CREATE INDEX IF NOT EXISTS entry_links_entry_id_idx ON entry_links(entry_id);
 CREATE INDEX IF NOT EXISTS entry_links_user_id_idx  ON entry_links(user_id);
@@ -115,8 +204,28 @@ CREATE TABLE IF NOT EXISTS entry_versions (
 
 ALTER TABLE entry_versions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "entry_versions: owner full access" ON entry_versions;
 CREATE POLICY "entry_versions: owner full access" ON entry_versions
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  FOR ALL USING (
+    auth.uid() = user_id AND
+    public.has_active_account() AND
+    EXISTS (
+      SELECT 1
+      FROM public.entries AS e
+      WHERE e.id = entry_versions.entry_id
+        AND e.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    auth.uid() = user_id AND
+    public.has_active_account() AND
+    EXISTS (
+      SELECT 1
+      FROM public.entries AS e
+      WHERE e.id = entry_versions.entry_id
+        AND e.user_id = auth.uid()
+    )
+  );
 
 CREATE INDEX IF NOT EXISTS entry_versions_entry_id_idx ON entry_versions(entry_id, created_at DESC);
 
@@ -133,8 +242,28 @@ CREATE TABLE IF NOT EXISTS usage_events (
 
 ALTER TABLE usage_events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "usage_events: owner full access" ON usage_events;
 CREATE POLICY "usage_events: owner full access" ON usage_events
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  FOR ALL USING (
+    auth.uid() = user_id AND
+    public.has_active_account() AND
+    EXISTS (
+      SELECT 1
+      FROM public.entries AS e
+      WHERE e.id = usage_events.entry_id
+        AND e.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    auth.uid() = user_id AND
+    public.has_active_account() AND
+    EXISTS (
+      SELECT 1
+      FROM public.entries AS e
+      WHERE e.id = usage_events.entry_id
+        AND e.user_id = auth.uid()
+    )
+  );
 
 CREATE INDEX IF NOT EXISTS usage_events_entry_id_idx ON usage_events(entry_id);
 CREATE INDEX IF NOT EXISTS usage_events_user_id_idx  ON usage_events(user_id, created_at DESC);
@@ -150,10 +279,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS entries_updated_at ON entries;
 CREATE TRIGGER entries_updated_at
   BEFORE UPDATE ON entries
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+DROP TRIGGER IF EXISTS categories_updated_at ON categories;
 CREATE TRIGGER categories_updated_at
   BEFORE UPDATE ON categories
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -161,19 +292,37 @@ CREATE TRIGGER categories_updated_at
 -- ----------------------------------------------------------------
 -- 7. Supabase Storage bucket (run once, or create in the dashboard)
 -- ----------------------------------------------------------------
--- INSERT INTO storage.buckets (id, name, public)
---   VALUES ('entry-images', 'entry-images', false)
---   ON CONFLICT (id) DO NOTHING;
---
--- CREATE POLICY "entry-images: owner access" ON storage.objects
---   FOR ALL USING (
---     bucket_id = 'entry-images' AND
---     auth.uid()::text = (storage.foldername(name))[1]
---   );
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  VALUES (
+    'entry-images',
+    'entry-images',
+    false,
+    10485760,
+    ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif']
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    public = EXCLUDED.public,
+    file_size_limit = EXCLUDED.file_size_limit,
+    allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+DROP POLICY IF EXISTS "entry-images: owner access" ON storage.objects;
+CREATE POLICY "entry-images: owner access" ON storage.objects
+  FOR ALL USING (
+    bucket_id = 'entry-images' AND
+    auth.uid()::text = (storage.foldername(name))[1] AND
+    public.has_active_account()
+  )
+  WITH CHECK (
+    bucket_id = 'entry-images' AND
+    auth.uid()::text = (storage.foldername(name))[1] AND
+    public.has_active_account()
+  );
 
 -- ----------------------------------------------------------------
--- 8. Trash auto-purge (call from a scheduled Vercel Cron / GitHub Action)
+-- 8. Optional manual trash cleanup
 -- ----------------------------------------------------------------
+-- No purge job is installed by this schema. Configure a scheduled job explicitly
+-- before enabling automatic deletion; this query permanently deletes matching rows.
 -- DELETE FROM entries
 --   WHERE deleted_at IS NOT NULL
 --     AND deleted_at < NOW() - INTERVAL '30 days';

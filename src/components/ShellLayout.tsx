@@ -12,22 +12,23 @@ interface ShellLayoutProps {
   user: User;
   entries: Partial<Entry>[];
   children: React.ReactNode;
+  isOwner: boolean;
 }
 
-export default function ShellLayout({ user, entries, children }: ShellLayoutProps) {
+export default function ShellLayout({ user, entries, children, isOwner }: ShellLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div className="app-shell" style={{ position: "relative" }}>
       <div className={sidebarOpen ? "" : "sidebar-collapsed"}>
-        <Sidebar user={user} />
+        <Sidebar user={user} isOwner={isOwner} />
       </div>
 
       <div className="main-content" style={{ position: "relative" }}>
         {/* Toggle Button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="btn btn-ghost btn-icon"
+          className="btn btn-ghost btn-icon sidebar-toggle"
           style={{
             position: "fixed",
             top: 14,
@@ -47,8 +48,9 @@ export default function ShellLayout({ user, entries, children }: ShellLayoutProp
           {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
         </button>
 
-        <MobileNav user={user} />
-        <main style={{ flex: 1, minWidth: 0, paddingTop: 10 }}>
+        <MobileNav user={user} isOwner={isOwner} />
+        <a className="skip-link" href="#main-content">Skip to main content</a>
+        <main id="main-content" tabIndex={-1} style={{ flex: 1, minWidth: 0, paddingTop: 10 }}>
           {children}
         </main>
       </div>

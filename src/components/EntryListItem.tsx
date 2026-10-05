@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Star, Pin, Copy, Check, Terminal } from "lucide-react";
+import { Star, Pin, Check, Terminal } from "lucide-react";
 import { useState } from "react";
 import type { Entry } from "@/lib/types";
 import { formatRelativeDate, truncate } from "@/lib/utils";

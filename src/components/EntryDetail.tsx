@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import {
-  ArrowLeft, Edit, Trash2, Star, Pin, Copy, Check,
+  Edit, Trash2, Star, Pin, Copy, Check,
   ExternalLink, Terminal, Tag, ChevronRight, Download,
   Globe, Shield, Zap, Clock, Users, BookOpen, Lightbulb
 } from "lucide-react";
 import type { Entry } from "@/lib/types";
 import { formatDate, formatRelativeDate } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import { useImageUrls } from "@/lib/use-image-urls";
+import BackLink from "@/components/BackLink";
 
 interface EntryDetailProps {
   entry: Entry;
@@ -26,42 +27,92 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function EntryDetail({ entry }: EntryDetailProps) {
   const [copied, setCopied] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [favorited, setFavorited] = useState(entry.favorited);
   const [pinned, setPinned] = useState(entry.pinned);
+  const [updatingFavorite, setUpdatingFavorite] = useState(false);
+  const [updatingPin, setUpdatingPin] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const imageUrls = useImageUrls(entry.images ?? []);
   const router = useRouter();
-  const supabase = createClient();
   const { success, error } = useToast();
 
+  const updateEntry = async (changes: Record<string, boolean>) => {
+    const response = await fetch(`/api/entries/${entry.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changes),
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      throw new Error(result?.error ?? "Could not update entry");
+    }
+  };
+
   const handleCopy = async () => {
-    if (entry.command_snippet) {
+    if (!entry.command_snippet || copying) return;
+    setCopying(true);
+    try {
       await navigator.clipboard.writeText(entry.command_snippet);
       setCopied(true);
       success("Copied to clipboard");
-      setTimeout(() => setCopied(false), 2000);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      error("Could not copy the command. Check your browser clipboard permissions.");
+    } finally {
+      setCopying(false);
     }
   };
 
   const toggleFavorite = async () => {
+    if (updatingFavorite) return;
     const newVal = !favorited;
     setFavorited(newVal);
-    await supabase.from("entries").update({ favorited: newVal }).eq("id", entry.id);
+    setUpdatingFavorite(true);
+    try {
+      await updateEntry({ favorited: newVal });
+    } catch {
+      setFavorited(!newVal);
+      error("Could not update favorite status");
+      return;
+    } finally {
+      setUpdatingFavorite(false);
+    }
     success(newVal ? "Added to Favorites" : "Removed from Favorites");
   };
 
   const togglePin = async () => {
+    if (updatingPin) return;
     const newVal = !pinned;
     setPinned(newVal);
-    await supabase.from("entries").update({ pinned: newVal }).eq("id", entry.id);
+    setUpdatingPin(true);
+    try {
+      await updateEntry({ pinned: newVal });
+    } catch {
+      setPinned(!newVal);
+      error("Could not update pin status");
+      return;
+    } finally {
+      setUpdatingPin(false);
+    }
     success(newVal ? "Pinned to top" : "Unpinned");
   };
 
   const handleDelete = async () => {
+    if (deleting) return;
     if (!confirm("Move this entry to trash?")) return;
-    const { error: err } = await supabase
-      .from("entries")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", entry.id);
-    if (err) { error("Failed to delete entry"); return; }
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/entries/${entry.id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? "Failed to delete entry");
+      }
+    } catch {
+      error("Failed to delete entry");
+      setDeleting(false);
+      return;
+    }
     success("Moved to trash");
     router.push("/dashboard");
   };
@@ -73,10 +124,7 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
       {/* Header */}
       <div className="entry-detail-header">
         <div className="entry-detail-nav">
-          <Link href="/dashboard" className="btn btn-ghost btn-sm">
-            <ArrowLeft size={15} />
-            Back
-          </Link>
+          <BackLink href="/dashboard">Back</BackLink>
           <div style={{ display: "flex", gap: 4 }}>
             {/* breadcrumb */}
             <span style={{ color: "var(--text-muted)", fontSize: 13 }}>Dashboard</span>
@@ -90,6 +138,9 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
             id="btn-toggle-favorite"
             className={`btn btn-ghost btn-sm ${favorited ? "text-yellow" : ""}`}
             onClick={toggleFavorite}
+            disabled={updatingFavorite || deleting}
+            aria-pressed={favorited}
+            aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
             data-tooltip={favorited ? "Unfavorite" : "Favorite"}
             style={favorited ? { color: "#fbbf24" } : {}}
           >
@@ -100,19 +151,22 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
             id="btn-toggle-pin"
             className={`btn btn-ghost btn-sm`}
             onClick={togglePin}
+            disabled={updatingPin || deleting}
+            aria-pressed={pinned}
+            aria-label={pinned ? "Unpin entry" : "Pin entry"}
             data-tooltip={pinned ? "Unpin" : "Pin to top"}
             style={pinned ? { color: "var(--brand-blue-bright)" } : {}}
           >
             <Pin size={15} />
             {pinned ? "Pinned" : "Pin"}
           </button>
-          <Link href={`/entries/${entry.id}/edit`} className="btn btn-secondary btn-sm" id="btn-edit-entry">
+          <Link href={`/entries/${entry.id}/edit`} className="btn btn-secondary btn-sm" id="btn-edit-entry" aria-disabled={deleting}>
             <Edit size={14} />
             Edit
           </Link>
-          <button className="btn btn-danger btn-sm" onClick={handleDelete} id="btn-delete-entry">
+          <button className="btn btn-danger btn-sm" onClick={handleDelete} id="btn-delete-entry" disabled={deleting} aria-busy={deleting}>
             <Trash2 size={14} />
-            Delete
+            {deleting ? "Moving…" : "Delete"}
           </button>
         </div>
       </div>
@@ -227,9 +281,11 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
                   id="btn-copy-command"
                   className={`btn btn-sm ${copied ? "btn-secondary" : "btn-primary"}`}
                   onClick={handleCopy}
+                  disabled={copying}
+                  aria-label={copying ? "Copying command" : copied ? "Command copied" : "Copy command"}
                 >
-                  {copied ? <Check size={13} /> : <Copy size={13} />}
-                  {copied ? "Copied!" : "Copy"}
+                  {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+                  {copying ? "Copying…" : copied ? "Copied!" : "Copy"}
                 </button>
               </div>
               <div className="code-block">
@@ -248,7 +304,7 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
                 Screenshots
               </div>
               <div className="entry-images">
-                {entry.images.map((img, i) => (
+                {imageUrls.map((img, i) => img && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     key={i}

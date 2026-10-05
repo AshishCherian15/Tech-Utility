@@ -1,5 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { readJsonBody } from "@/lib/validation/json";
+import { z } from "zod";
+
+const MAX_AUTOFILL_REQUEST_BYTES = 32 * 1024;
+const autofillRequestSchema = z.object({
+  content: z.string().trim().min(1).max(20000),
+  custom_api_key: z.string().trim().max(512).optional(),
+  custom_provider: z.enum(["groq", "gemini"]).optional(),
+});
+
+const AI_REQUEST_TIMEOUT_MS = 15000;
 
 const SYSTEM_PROMPT = `You are a technical knowledge base assistant. The user will give you a piece of text — a tool name, URL, command, or description. Your ONLY job is to extract information from what they provide and return it as JSON.
 
@@ -34,24 +45,25 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { input_type?: string; content?: string; custom_api_key?: string; custom_provider?: string };
+  let body: unknown;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    body = await readJsonBody(request, MAX_AUTOFILL_REQUEST_BYTES);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return NextResponse.json({ error: "Autofill request exceeds the 32 KB limit" }, { status: 413 });
+    }
+    return NextResponse.json({ error: "Invalid or oversized request body" }, { status: 400 });
   }
 
-  const content = body.content;
-  if (!content || typeof content !== "string" || !content.trim()) {
-    return NextResponse.json({ error: "content is required" }, { status: 400 });
+  const parsed = autofillRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid autofill request", details: parsed.error.issues }, { status: 400 });
   }
 
-  const activeProvider = body.custom_provider || "groq";
-  const customKey = body.custom_api_key?.trim();
+  const { content, custom_api_key: customKey, custom_provider: activeProvider = "groq" } = parsed.data;
 
-  // Try custom key first, fallback to environment keys
-  const groqApiKey = (activeProvider === "groq" && customKey) ? customKey : process.env.GROQ_API_KEY || (customKey?.startsWith("gsk_") ? customKey : undefined);
-  const geminiApiKey = (activeProvider === "gemini" && customKey) ? customKey : process.env.GEMINI_API_KEY || (customKey?.startsWith("AIza") ? customKey : undefined);
+  const groqApiKey = activeProvider === "groq" ? customKey || process.env.GROQ_API_KEY : undefined;
+  const geminiApiKey = activeProvider === "gemini" ? customKey || process.env.GEMINI_API_KEY : undefined;
 
   if (!groqApiKey && !geminiApiKey) {
     return NextResponse.json(
@@ -72,6 +84,7 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
+          max_tokens: 1024,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: `--- USER INPUT ---\n${content}` },
@@ -79,24 +92,26 @@ export async function POST(request: Request) {
           temperature: 0.1,
           response_format: { type: "json_object" },
         }),
+        signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
       });
 
       if (groqRes.ok) {
         const groqData = await groqRes.json();
         rawText = groqData.choices?.[0]?.message?.content ?? "";
       } else {
-        const errJson = await groqRes.text();
-        console.error("Groq API Error Response:", errJson);
+        console.error("Groq API request failed with status:", groqRes.status);
       }
     }
 
-    // Fallback to Gemini if Groq not set or failed
     if (!rawText && geminiApiKey) {
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": geminiApiKey,
+          },
           body: JSON.stringify({
             contents: [
               {
@@ -107,6 +122,7 @@ export async function POST(request: Request) {
             ],
             generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
           }),
+          signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
         }
       );
 
@@ -142,18 +158,18 @@ export async function POST(request: Request) {
     const validPlatforms = ["Windows","Android","iOS","macOS","Linux","Web","Cross-platform"];
 
     const safe = {
-      ...(typeof draft.title === "string" && draft.title ? { title: draft.title } : {}),
+      ...(typeof draft.title === "string" && draft.title ? { title: draft.title.slice(0, 500) } : {}),
       ...(typeof draft.type === "string" && validTypes.includes(draft.type) ? { type: draft.type } : {}),
-      ...(Array.isArray(draft.tags) ? { tags: draft.tags.filter((t): t is string => typeof t === "string").slice(0, 8) } : {}),
-      ...(typeof draft.what_it_is === "string" ? { what_it_is: draft.what_it_is } : {}),
-      ...(typeof draft.why_useful === "string" ? { why_useful: draft.why_useful } : {}),
-      ...(typeof draft.who_can_use === "string" ? { who_can_use: draft.who_can_use } : {}),
-      ...(typeof draft.when_to_use === "string" ? { when_to_use: draft.when_to_use } : {}),
-      ...(typeof draft.how_to_use === "string" ? { how_to_use: draft.how_to_use } : {}),
-      ...(typeof draft.example === "string" ? { example: draft.example } : {}),
+      ...(Array.isArray(draft.tags) ? { tags: draft.tags.filter((t): t is string => typeof t === "string").map((tag) => tag.slice(0, 100)).slice(0, 8) } : {}),
+      ...(typeof draft.what_it_is === "string" ? { what_it_is: draft.what_it_is.slice(0, 10000) } : {}),
+      ...(typeof draft.why_useful === "string" ? { why_useful: draft.why_useful.slice(0, 10000) } : {}),
+      ...(typeof draft.who_can_use === "string" ? { who_can_use: draft.who_can_use.slice(0, 10000) } : {}),
+      ...(typeof draft.when_to_use === "string" ? { when_to_use: draft.when_to_use.slice(0, 10000) } : {}),
+      ...(typeof draft.how_to_use === "string" ? { how_to_use: draft.how_to_use.slice(0, 10000) } : {}),
+      ...(typeof draft.example === "string" ? { example: draft.example.slice(0, 10000) } : {}),
       ...(typeof draft.difficulty === "string" && validDiff.includes(draft.difficulty) ? { difficulty: draft.difficulty } : {}),
       ...(typeof draft.platform === "string" && validPlatforms.includes(draft.platform) ? { platform: draft.platform } : {}),
-      ...(typeof draft.command_snippet === "string" ? { command_snippet: draft.command_snippet } : {}),
+      ...(typeof draft.command_snippet === "string" ? { command_snippet: draft.command_snippet.slice(0, 10000) } : {}),
     };
 
     return NextResponse.json(safe);

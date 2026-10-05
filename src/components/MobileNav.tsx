@@ -1,46 +1,113 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
-import { Menu, X, Plus, LayoutDashboard, FolderOpen, Trash2, Settings } from "lucide-react";
+import { Menu, X, Plus, LayoutDashboard, FolderOpen, Trash2, Settings, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
+import BrandMark from "@/components/BrandMark";
 
 interface MobileNavProps {
   user: User;
+  isOwner: boolean;
 }
 
-export default function MobileNav({ user }: MobileNavProps) {
+export default function MobileNav({ user, isOwner }: MobileNavProps) {
   const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const drawerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const supabase = createClient();
+  const { error: toastError } = useToast();
+
+  useEffect(() => {
+    if (!open) return;
+
+    const openerButton = menuButtonRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    drawerRef.current?.querySelector<HTMLElement>("button, a")?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !drawerRef.current) return;
+
+      const focusable = drawerRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled])'
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      openerButton?.focus();
+    };
+  }, [open]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toastError("Could not sign out. Please try again.");
+        return;
+      }
+      router.replace("/login");
+    } catch {
+      toastError("Could not sign out. Please try again.");
+    } finally {
+      setSigningOut(false);
+    }
   };
 
-  const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Ash";
+  const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User";
+  const navItems = [
+    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/categories", icon: FolderOpen, label: "Categories" },
+    { href: "/trash", icon: Trash2, label: "Trash" },
+    ...(isOwner ? [{ href: "/users", icon: Users, label: "User accounts" }] : []),
+    { href: "/settings", icon: Settings, label: "Settings" },
+  ];
 
   return (
     <>
       <header className="mobile-header">
         <div className="mobile-logo">
-          <div className="mobile-logo-icon"><span>A</span></div>
-          <span className="mobile-logo-text">Ash-Tech</span>
+          <BrandMark size={32} />
+          <span className="mobile-logo-text">Tech-Utility</span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <Link href="/entries/new" className="btn btn-primary btn-sm">
-            <Plus size={14} />
+            <Plus size={14} aria-hidden="true" />
             Add
           </Link>
           <button
+            ref={menuButtonRef}
             className="btn btn-ghost btn-icon"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            aria-controls={open ? "mobile-navigation-dialog" : undefined}
           >
-            <Menu size={20} />
+            <Menu size={20} aria-hidden="true" />
           </button>
         </div>
       </header>
@@ -48,28 +115,32 @@ export default function MobileNav({ user }: MobileNavProps) {
       {/* Drawer */}
       {open && (
         <div className="mobile-drawer-overlay" onClick={() => setOpen(false)}>
-          <nav className="mobile-drawer" onClick={e => e.stopPropagation()}>
+          <nav
+            id="mobile-navigation-dialog"
+            ref={drawerRef}
+            className="mobile-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="mobile-drawer-header">
               <span style={{ fontWeight: 600, fontSize: 16 }}>Menu</span>
-              <button className="btn btn-ghost btn-icon" onClick={() => setOpen(false)}>
-                <X size={18} />
+              <button type="button" className="btn btn-ghost btn-icon" onClick={() => setOpen(false)} aria-label="Close menu">
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
             <div className="mobile-drawer-links">
-              {[
-                { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-                { href: "/categories", icon: FolderOpen, label: "Categories" },
-                { href: "/trash", icon: Trash2, label: "Trash" },
-                { href: "/settings", icon: Settings, label: "Settings" },
-              ].map(({ href, icon: Icon, label }) => (
+              {navItems.map(({ href, icon: Icon, label }) => (
                 <Link
                   key={href}
                   href={href}
                   className="sidebar-nav-item"
                   onClick={() => setOpen(false)}
+                  aria-label={label}
                   style={{ fontSize: 15, padding: "12px 8px" }}
                 >
-                  <Icon size={18} />
+                  <Icon size={18} aria-hidden="true" />
                   {label}
                 </Link>
               ))}
@@ -77,8 +148,8 @@ export default function MobileNav({ user }: MobileNavProps) {
             <div className="mobile-drawer-user">
               <div className="sidebar-user-name">{name}</div>
               <div className="sidebar-user-email">{user.email}</div>
-              <button onClick={handleSignOut} className="btn btn-danger btn-sm" style={{ marginTop: 12 }}>
-                Sign out
+              <button type="button" onClick={handleSignOut} disabled={signingOut} aria-busy={signingOut} className="btn btn-danger" style={{ marginTop: 12 }}>
+                {signingOut ? "Signing out…" : "Sign out"}
               </button>
             </div>
           </nav>
@@ -110,22 +181,6 @@ export default function MobileNav({ user }: MobileNavProps) {
           gap: 10px;
         }
 
-        .mobile-logo-icon {
-          width: 32px;
-          height: 32px;
-          background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .mobile-logo-icon span {
-          font-size: 16px;
-          font-weight: 800;
-          color: white;
-        }
-
         .mobile-logo-text {
           font-size: 16px;
           font-weight: 700;
@@ -152,6 +207,12 @@ export default function MobileNav({ user }: MobileNavProps) {
           flex-direction: column;
           padding: 16px;
           animation: slideInRight 0.2s ease-out;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .mobile-drawer {
+            animation: none;
+          }
         }
 
         @keyframes slideInRight {

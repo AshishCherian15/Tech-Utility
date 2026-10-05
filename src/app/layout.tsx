@@ -1,11 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
+import NavigationHistory from "@/components/NavigationHistory";
+
+const deploymentUrl =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
 export const metadata: Metadata = {
+  metadataBase: new URL(deploymentUrl),
   title: {
-    default: "Ash-Tech — Your Private Tech Memory",
-    template: "%s | Ash-Tech",
+    default: "Tech-Utility — Your Private Tech Library",
+    template: "%s | Tech-Utility",
   },
   description:
     "A private, searchable knowledge base for tips, tricks, hacks, apps, commands, tools and prompts — the things you find once and shouldn't have to Google again.",
@@ -15,7 +21,16 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/tech-utility-icon.svg", sizes: "any", type: "image/svg+xml" },
+    ],
+    apple: "/tech-utility-icon.svg",
+  },
+  openGraph: {
+    type: "website",
+    title: "Tech-Utility — Your Private Tech Library",
+    description: "A private, searchable knowledge base for your technical discoveries.",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Tech-Utility private tech library" }],
   },
 };
 
@@ -34,6 +49,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body suppressHydrationWarning>
+        <NavigationHistory />
         <ToastProvider>
           {children}
         </ToastProvider>
@@ -41,4 +57,3 @@ export default function RootLayout({
     </html>
   );
 }
-

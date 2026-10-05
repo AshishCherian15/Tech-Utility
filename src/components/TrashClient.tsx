@@ -1,29 +1,48 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, RotateCcw, Clock } from "lucide-react";
+import { Trash2, RotateCcw } from "lucide-react";
 import type { Entry } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/Toast";
 
 interface TrashClientProps {
   initialEntries: Entry[];
 }
 
-function daysRemaining(deletedAt: string) {
-  const deleted = new Date(deletedAt);
-  const expiry = new Date(deleted.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const now = new Date();
-  const days = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(0, days);
-}
-
 export default function TrashClient({ initialEntries }: TrashClientProps) {
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
-  const supabase = createClient();
+  const [restoringIds, setRestoringIds] = useState<Set<string>>(() => new Set());
+  const { success, error } = useToast();
 
   const restore = async (id: string) => {
-    await supabase.from("entries").update({ deleted_at: null }).eq("id", id);
+    if (restoringIds.has(id)) return;
+    setRestoringIds(current => new Set(current).add(id));
+    try {
+      const response = await fetch(`/api/entries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deleted_at: null }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? "Could not restore the entry");
+      }
+    } catch {
+      error("Could not restore the entry");
+      setRestoringIds(current => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      return;
+    }
     setEntries(prev => prev.filter(e => e.id !== id));
+    setRestoringIds(current => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+    success("Entry restored");
   };
 
   return (
@@ -31,45 +50,40 @@ export default function TrashClient({ initialEntries }: TrashClientProps) {
       <div className="page-header">
         <div>
           <h1 className="page-title">Trash</h1>
-          <p className="page-sub">
-            {entries.length} deleted {entries.length === 1 ? "entry" : "entries"} · auto-purged after 30 days
+          <p className="page-sub" role="status" aria-live="polite" aria-atomic="true">
+            {entries.length} deleted {entries.length === 1 ? "entry" : "entries"}
           </p>
         </div>
       </div>
 
       {entries.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon"><Trash2 size={40} /></div>
+          <div className="empty-state-icon"><Trash2 size={40} aria-hidden="true" /></div>
           <h2 className="empty-state-title">Trash is empty</h2>
-          <p className="empty-state-desc">Deleted entries appear here for 30 days before permanent removal</p>
+          <p className="empty-state-desc">Deleted entries stay here until restored.</p>
         </div>
       ) : (
         <div style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: 8 }}>
-          {entries.map(entry => {
-            const days = daysRemaining(entry.deleted_at!);
-            return (
-              <div key={entry.id} className="trash-item">
+          {entries.map(entry => (
+              <div key={entry.id} className="trash-item" aria-busy={restoringIds.has(entry.id)}>
                 <div className="trash-item-info">
                   <div className="trash-item-title">{entry.title}</div>
                   <div className="trash-item-meta">
                     {entry.category?.name ?? "Uncategorized"} · {entry.type}
                   </div>
                 </div>
-                <div className="trash-item-days">
-                  <Clock size={12} />
-                  {days === 0 ? "Expires today" : `${days}d remaining`}
-                </div>
                 <button
-                  className="btn btn-secondary btn-sm"
+                  type="button"
+                  className="btn btn-secondary"
                   onClick={() => restore(entry.id)}
-                  aria-label="Restore entry"
+                  disabled={restoringIds.has(entry.id)}
+                  aria-label={restoringIds.has(entry.id) ? `Restoring ${entry.title}` : `Restore ${entry.title}`}
                 >
-                  <RotateCcw size={13} />
-                  Restore
+                  <RotateCcw size={13} aria-hidden="true" />
+                  {restoringIds.has(entry.id) ? "Restoring…" : "Restore"}
                 </button>
               </div>
-            );
-          })}
+          ))}
         </div>
       )}
 
@@ -106,15 +120,6 @@ export default function TrashClient({ initialEntries }: TrashClientProps) {
           font-size: 12px;
           color: var(--text-muted);
           margin-top: 2px;
-        }
-
-        .trash-item-days {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 12px;
-          color: var(--text-muted);
-          white-space: nowrap;
         }
 
         @media (max-width: 768px) {

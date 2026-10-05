@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, createContext, useContext, useCallback } from "react";
+import { useState, createContext, useContext, useCallback } from "react";
 import { Check, X, AlertTriangle, Info, Sparkles } from "lucide-react";
 
 type ToastType = "success" | "error" | "info" | "warning" | "ai";
@@ -72,14 +72,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             className="toast animate-slide-up"
             style={{ borderLeft: `3px solid ${COLORS[t.type]}` }}
-            role="alert"
+            role={t.type === "error" || t.type === "warning" ? "alert" : "status"}
+            aria-live={t.type === "error" || t.type === "warning" ? "assertive" : "polite"}
+            aria-atomic="true"
           >
-            <span className="toast-icon" style={{ color: COLORS[t.type] }}>
+            <span className="toast-icon" aria-hidden="true" style={{ color: COLORS[t.type] }}>
               {ICONS[t.type]}
             </span>
             <span className="toast-message">{t.message}</span>
-            <button className="toast-dismiss" onClick={() => dismiss(t.id)} aria-label="Dismiss">
-              <X size={13} />
+            <button type="button" className="toast-dismiss" onClick={() => dismiss(t.id)} aria-label="Dismiss notification">
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
         ))}
@@ -125,11 +127,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         }
 
         .toast-dismiss {
+          min-width: 44px;
+          min-height: 44px;
           background: none;
           border: none;
           cursor: pointer;
           color: var(--text-muted);
-          padding: 2px;
+          padding: 8px;
+          align-items: center;
+          justify-content: center;
           display: flex;
           flex-shrink: 0;
           transition: color 0.15s;
@@ -143,6 +149,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         }
         .animate-slide-up {
           animation: slide-up 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .animate-slide-up {
+            animation: none;
+          }
         }
 
         @media (max-width: 480px) {

@@ -9,11 +9,12 @@ export const metadata: Metadata = {
 
 export default async function TrashPage() {
   const supabase = await createClient();
-  const { data: entries } = await supabase
+  const { data: entries, error } = await supabase
     .from("entries")
     .select("*, category:categories(*)")
     .not("deleted_at", "is", null)
     .order("deleted_at", { ascending: false });
+  if (error) throw error;
 
-  return <TrashClient initialEntries={entries ?? []} />;
+  return <TrashClient initialEntries={entries} />;
 }

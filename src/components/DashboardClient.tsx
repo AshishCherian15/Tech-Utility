@@ -4,18 +4,23 @@ import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   Search, Plus, Grid3X3, List, Table, Image as ImageIcon,
-  Star, Pin, SlidersHorizontal, X, Filter
+  Pin, SlidersHorizontal, X, Lightbulb, Terminal, Wrench, BookOpen
 } from "lucide-react";
 import type { Entry, Category, ViewMode, SortOption, EntryType, DifficultyLevel, Platform } from "@/lib/types";
 import EntryCard from "@/components/EntryCard";
 import EntryListItem from "@/components/EntryListItem";
 import { cn } from "@/lib/utils";
+import { useImageUrls } from "@/lib/use-image-urls";
+import { useToast } from "@/components/Toast";
 
 interface DashboardClientProps {
   initialEntries: Entry[];
+  totalEntries?: number;
   categories: Category[];
   pageTitle?: string;
   emptyMessage?: string;
+  initialCategoryId?: string;
+  initialSort?: SortOption;
 }
 
 const ENTRY_TYPES: EntryType[] = ["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"];
@@ -35,18 +40,59 @@ const TYPE_COLORS: Record<EntryType, string> = {
   Prompt: "badge-pink",
 };
 
-export default function DashboardClient({ initialEntries, categories, pageTitle, emptyMessage }: DashboardClientProps) {
-  const [entries] = useState<Entry[]>(initialEntries);
+function GalleryCard({ entry, index }: { entry: Entry; index: number }) {
+  const imageUrls = useImageUrls(entry.images ?? []);
+
+  return (
+    <Link
+      href={`/entries/${entry.id}`}
+      className="gallery-card animate-fade-in"
+      style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+    >
+      <div className="gallery-card-img">
+        {imageUrls[0] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imageUrls[0]} alt={entry.title} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <div className="gallery-card-placeholder">
+            <span className={`badge ${TYPE_COLORS[entry.type]}`}>{entry.type}</span>
+          </div>
+        )}
+      </div>
+      <div className="gallery-card-info">
+        <div className="gallery-card-title">{entry.title}</div>
+        <div className="gallery-card-meta">{entry.category?.name}</div>
+      </div>
+    </Link>
+  );
+}
+
+export default function DashboardClient({
+  initialEntries,
+  totalEntries: initialTotalEntries,
+  categories,
+  pageTitle,
+  emptyMessage,
+  initialCategoryId = "",
+  initialSort = "newest",
+}: DashboardClientProps) {
+  const [entries, setEntries] = useState<Entry[]>(initialEntries);
+  const [nextOffset, setNextOffset] = useState(initialEntries.length);
+  const [totalEntries, setTotalEntries] = useState(initialTotalEntries ?? initialEntries.length);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [view, setView] = useState<ViewMode>("grid");
-  const [sort, setSort] = useState<SortOption>("newest");
-  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [sort, setSort] = useState<SortOption>(initialSort);
+  const [filterCategory, setFilterCategory] = useState<string>(initialCategoryId);
   const [filterType, setFilterType] = useState<EntryType | "">("");
   const [filterDifficulty, setFilterDifficulty] = useState<DifficultyLevel | "">("");
   const [filterPlatform, setFilterPlatform] = useState<Platform | "">("");
   const [showFilters, setShowFilters] = useState(false);
+  const { error: toastError } = useToast();
 
   const activeFilterCount = [filterCategory, filterType, filterDifficulty, filterPlatform].filter(Boolean).length;
+  const hasQuery = search.trim().length > 0;
+  const hasActiveCriteria = hasQuery || activeFilterCount > 0;
 
   const filtered = useMemo(() => {
     let result = entries;
@@ -92,24 +138,57 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
     setFilterPlatform("");
   }, []);
 
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const response = await fetch(`/api/entries?limit=100&offset=${nextOffset}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Could not load more entries");
+      const loadedIds = new Set(entries.map((entry) => entry.id));
+      const nextEntries = (result.entries ?? []) as Entry[];
+      setEntries((current) => [
+        ...current,
+        ...nextEntries.filter((entry) => !loadedIds.has(entry.id)),
+      ]);
+      setNextOffset((offset) => offset + nextEntries.length);
+      setTotalEntries(result.total ?? totalEntries);
+    } catch (error) {
+      toastError(error instanceof Error ? error.message : "Could not load more entries");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   return (
     <div className="dashboard">
       {/* Hero / Search */}
       <section className="dashboard-hero circuit-bg">
         <div className="dashboard-hero-content">
-          <h1 className="dashboard-hero-title">
-            {pageTitle ?? "Your Tech Memory"}
-          </h1>
-          <p className="dashboard-hero-sub">
-            {entries.length} {entries.length === 1 ? "entry" : "entries"} saved · search to find anything instantly
-          </p>
+          <div className="dashboard-hero-heading">
+            <div>
+              <span className="dashboard-eyebrow">YOUR PERSONAL TECH LIBRARY</span>
+              <h1 className="dashboard-hero-title">
+                {pageTitle ?? "Your Tech Memory"}
+              </h1>
+              <p className="dashboard-hero-sub">
+                {entries.length < totalEntries
+                  ? `Showing ${entries.length} of ${totalEntries} entries · load more to search older entries`
+                  : `${totalEntries} ${totalEntries === 1 ? "entry" : "entries"} saved · search to find anything instantly`}
+              </p>
+            </div>
+            <Link href="/entries/new" className="btn btn-primary dashboard-new-entry">
+              <Plus size={17} aria-hidden="true" />
+              New entry
+            </Link>
+          </div>
 
           {/* Search pill */}
-          <div className="search-pill dashboard-search" onClick={() => document.getElementById("main-search")?.focus()}>
-            <Search size={18} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+          <div className="search-pill dashboard-search">
+            <Search size={18} aria-hidden="true" style={{ color: "var(--text-muted)", flexShrink: 0 }} />
             <input
               id="main-search"
               type="text"
+              aria-label="Search saved entries"
               placeholder="Search by title, tag, command, category…"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -117,37 +196,47 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
             />
             {search && (
               <button
+                type="button"
                 className="btn btn-ghost btn-icon btn-sm"
                 onClick={() => setSearch("")}
+                aria-label="Clear search"
                 style={{ padding: 4 }}
               >
-                <X size={14} />
+                <X size={14} aria-hidden="true" />
               </button>
             )}
-            <kbd
-              style={{ fontSize: 11, color: "var(--text-muted)", padding: "2px 6px", background: "rgba(255,255,255,0.06)", borderRadius: 4, border: "1px solid var(--border-subtle)", whiteSpace: "nowrap", cursor: "pointer" }}
-              onClick={e => { e.stopPropagation(); window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true })); }}
+            <button
+              type="button"
+              className="search-shortcut"
+              aria-label="Open command palette"
+              onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }))}
             >
-              Ctrl K
-            </kbd>
+              <kbd style={{ fontSize: 11, color: "var(--text-muted)", padding: "2px 6px", background: "rgba(255,255,255,0.06)", borderRadius: 4, border: "1px solid var(--border-subtle)", whiteSpace: "nowrap" }}>
+                Ctrl K
+              </kbd>
+            </button>
           </div>
 
           {/* Category chips */}
-          <div className="dashboard-category-chips">
+          <div className="dashboard-category-chips" role="group" aria-label="Filter by category">
             <button
+              type="button"
               className={cn("category-chip", !filterCategory && "category-chip-active")}
               onClick={() => setFilterCategory("")}
+              aria-pressed={!filterCategory}
             >
               All
             </button>
             {categories.map(cat => (
               <button
                 key={cat.id}
+                type="button"
                 className={cn("category-chip", filterCategory === cat.id && "category-chip-active")}
                 onClick={() => setFilterCategory(filterCategory === cat.id ? "" : cat.id)}
+                aria-pressed={filterCategory === cat.id}
                 style={filterCategory === cat.id ? { borderColor: cat.color } : {}}
               >
-                <span style={{ fontSize: 14 }}>{cat.icon}</span>
+                <span aria-hidden="true" style={{ fontSize: 14 }}>{cat.icon}</span>
                 {cat.name}
               </button>
             ))}
@@ -158,17 +247,22 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
       {/* Toolbar */}
       <div className="dashboard-toolbar">
         <div className="dashboard-toolbar-left">
-          <span className="dashboard-count">
+          <span className="dashboard-count" role="status" aria-live="polite" aria-atomic="true">
             {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
-            {search && <> for &ldquo;<strong>{search}</strong>&rdquo;</>}
+            {entries.length < totalEntries && <> · showing {entries.length} of {totalEntries}</>}
+            {hasQuery && <> for &ldquo;<strong>{search.trim()}</strong>&rdquo;</>}
           </span>
 
           <button
+            type="button"
             className={cn("btn btn-secondary btn-sm", showFilters && "btn-primary")}
             onClick={() => setShowFilters(!showFilters)}
             id="btn-toggle-filters"
+            aria-expanded={showFilters}
+            aria-controls={showFilters ? "dashboard-filters" : undefined}
+            aria-label={`Filters${activeFilterCount ? `, ${activeFilterCount} active` : ""}`}
           >
-            <SlidersHorizontal size={14} />
+            <SlidersHorizontal size={14} aria-hidden="true" />
             Filters
             {activeFilterCount > 0 && (
               <span style={{
@@ -189,8 +283,8 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
           </button>
 
           {activeFilterCount > 0 && (
-            <button className="btn btn-ghost btn-sm" onClick={clearFilters}>
-              <X size={12} />
+            <button type="button" className="btn btn-ghost btn-sm" onClick={clearFilters}>
+              <X size={12} aria-hidden="true" />
               Clear
             </button>
           )}
@@ -201,6 +295,7 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
           <select
             className="input"
             style={{ width: "auto", padding: "6px 12px", fontSize: 13 }}
+            aria-label="Sort entries"
             value={sort}
             onChange={e => setSort(e.target.value as SortOption)}
           >
@@ -211,7 +306,7 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
           </select>
 
           {/* View switcher */}
-          <div className="view-switcher">
+          <div className="view-switcher" role="group" aria-label="Entry layout">
             {([
               { mode: "grid" as ViewMode, icon: Grid3X3 },
               { mode: "list" as ViewMode, icon: List },
@@ -220,12 +315,14 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
             ]).map(({ mode, icon: Icon }) => (
               <button
                 key={mode}
+                type="button"
                 className={cn("view-btn", view === mode && "view-btn-active")}
                 onClick={() => setView(mode)}
                 data-tooltip={mode.charAt(0).toUpperCase() + mode.slice(1)}
                 aria-label={`${mode} view`}
+                aria-pressed={view === mode}
               >
-                <Icon size={15} />
+                <Icon size={15} aria-hidden="true" />
               </button>
             ))}
           </div>
@@ -234,15 +331,17 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
 
       {/* Filters panel */}
       {showFilters && (
-        <div className="filters-panel animate-fade-in">
+        <div id="dashboard-filters" className="filters-panel animate-fade-in" role="region" aria-label="Entry filters">
           <div className="filters-group">
-            <label className="filters-label">Type</label>
-            <div className="filters-chips">
+            <span className="filters-label" id="filter-type-label">Type</span>
+            <div className="filters-chips" role="group" aria-labelledby="filter-type-label">
               {ENTRY_TYPES.map(t => (
                 <button
                   key={t}
+                  type="button"
                   className={cn("filter-chip", filterType === t && "filter-chip-active")}
                   onClick={() => setFilterType(filterType === t ? "" : t)}
+                  aria-pressed={filterType === t}
                 >
                   {t}
                 </button>
@@ -250,13 +349,15 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
             </div>
           </div>
           <div className="filters-group">
-            <label className="filters-label">Difficulty</label>
-            <div className="filters-chips">
+            <span className="filters-label" id="filter-difficulty-label">Difficulty</span>
+            <div className="filters-chips" role="group" aria-labelledby="filter-difficulty-label">
               {DIFFICULTY_LEVELS.map(d => (
                 <button
                   key={d}
+                  type="button"
                   className={cn("filter-chip", filterDifficulty === d && "filter-chip-active")}
                   onClick={() => setFilterDifficulty(filterDifficulty === d ? "" : d)}
+                  aria-pressed={filterDifficulty === d}
                 >
                   {d}
                 </button>
@@ -264,13 +365,15 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
             </div>
           </div>
           <div className="filters-group">
-            <label className="filters-label">Platform</label>
-            <div className="filters-chips">
+            <span className="filters-label" id="filter-platform-label">Platform</span>
+            <div className="filters-chips" role="group" aria-labelledby="filter-platform-label">
               {PLATFORMS.map(p => (
                 <button
                   key={p}
+                  type="button"
                   className={cn("filter-chip", filterPlatform === p && "filter-chip-active")}
                   onClick={() => setFilterPlatform(filterPlatform === p ? "" : p)}
+                  aria-pressed={filterPlatform === p}
                 >
                   {p}
                 </button>
@@ -285,21 +388,52 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
         {filtered.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">
-              {search ? <Search size={40} /> : <Plus size={40} />}
+              {hasActiveCriteria
+                ? <Search size={40} aria-hidden="true" />
+                : <Plus size={40} aria-hidden="true" />}
             </div>
             <h2 className="empty-state-title">
-              {search ? `No results for "${search}"` : emptyMessage ? "Nothing here yet" : "No entries yet"}
+              {hasActiveCriteria
+                ? hasQuery ? `No results for "${search.trim()}"` : "No entries match these filters"
+                : emptyMessage ? "Nothing here yet" : "No entries yet"}
             </h2>
             <p className="empty-state-desc">
-              {search
-                ? "Try a different search term or clear the filters"
+              {hasActiveCriteria
+                ? "Try another search or clear your search and filters"
                 : emptyMessage ?? "Add your first tech tip, command, app, or discovery"}
             </p>
-            {!search && (
-              <Link href="/entries/new" className="btn btn-primary" style={{ marginTop: 16 }}>
-                <Plus size={16} />
-                Add Your First Entry
-              </Link>
+            {hasActiveCriteria && (
+              <button type="button" className="btn btn-secondary" onClick={clearFilters} style={{ marginTop: 16 }}>
+                Clear search and filters
+              </button>
+            )}
+            {!hasActiveCriteria && (
+              <>
+                <Link href="/entries/new" className="btn btn-primary" style={{ marginTop: 16 }}>
+                  <Plus size={16} aria-hidden="true" />
+                  Add Your First Entry
+                </Link>
+                <div className="quick-entry-start">
+                  <span className="quick-entry-label">Choose a quick start</span>
+                  <div className="quick-entry-grid">
+                    {([
+                      { type: "Tip" as EntryType, label: "Save a tip", icon: Lightbulb },
+                      { type: "Command" as EntryType, label: "Save a command", icon: Terminal },
+                      { type: "Tool" as EntryType, label: "Save a tool", icon: Wrench },
+                      { type: "Guide" as EntryType, label: "Write a guide", icon: BookOpen },
+                    ]).map(({ type, label, icon: Icon }) => (
+                      <Link
+                        key={type}
+                        href={`/entries/new?type=${type}`}
+                        className="quick-entry-link"
+                      >
+                        <Icon size={16} aria-hidden="true" />
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </div>
         ) : view === "grid" ? (
@@ -372,31 +506,19 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
           /* Gallery view */
           <div className="gallery-grid">
             {filtered.map((entry, i) => (
-              <Link
-                key={entry.id}
-                href={`/entries/${entry.id}`}
-                className="gallery-card animate-fade-in"
-                style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
-              >
-                <div className="gallery-card-img">
-                  {entry.images?.[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={entry.images[0]} alt={entry.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : (
-                    <div className="gallery-card-placeholder">
-                      <span className={`badge ${TYPE_COLORS[entry.type]}`}>{entry.type}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="gallery-card-info">
-                  <div className="gallery-card-title">{entry.title}</div>
-                  <div className="gallery-card-meta">{entry.category?.name}</div>
-                </div>
-              </Link>
+              <GalleryCard key={entry.id} entry={entry} index={i} />
             ))}
           </div>
         )}
       </div>
+
+      {entries.length < totalEntries && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "0 24px 32px" }}>
+          <button type="button" className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? "Loading…" : `Load more (${totalEntries - entries.length} remaining)`}
+          </button>
+        </div>
+      )}
 
       <style>{`
         .dashboard {
@@ -406,7 +528,7 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
         }
 
         .dashboard-hero {
-          padding: 48px 32px 36px;
+          padding: 36px 32px 28px;
           border-bottom: 1px solid var(--border-subtle);
           position: relative;
           overflow: hidden;
@@ -424,27 +546,64 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
         }
 
         .dashboard-hero-content {
-          max-width: 700px;
+          max-width: 980px;
           position: relative;
         }
 
+        .dashboard-hero-heading {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 24px;
+          margin-bottom: 20px;
+        }
+
+        .dashboard-eyebrow {
+          display: inline-block;
+          color: var(--brand-blue-bright);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          margin-bottom: 8px;
+        }
+
         .dashboard-hero-title {
-          font-size: 32px;
+          font-size: clamp(28px, 4vw, 38px);
           font-weight: 800;
           color: var(--text-primary);
-          letter-spacing: -0.5px;
-          margin-bottom: 6px;
+          letter-spacing: -0.04em;
+          line-height: 1.12;
+          margin-bottom: 8px;
         }
 
         .dashboard-hero-sub {
           font-size: 14px;
           color: var(--text-muted);
-          margin-bottom: 24px;
+        }
+
+        .dashboard-new-entry {
+          flex-shrink: 0;
+          min-height: 46px;
+          padding-inline: 18px;
+          box-shadow: 0 8px 24px rgba(37, 99, 235, 0.24);
         }
 
         .dashboard-search {
           max-width: 600px;
           margin-bottom: 20px;
+        }
+
+        .search-shortcut {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 44px;
+          min-height: 44px;
+          padding: 0;
+          border: 0;
+          border-radius: var(--radius-sm);
+          background: transparent;
+          cursor: pointer;
         }
 
         .dashboard-category-chips {
@@ -457,7 +616,8 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          padding: 5px 14px;
+          min-height: 44px;
+          padding: 8px 14px;
           background: rgba(255,255,255,0.04);
           border: 1px solid var(--border-subtle);
           border-radius: 9999px;
@@ -522,6 +682,8 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
         }
 
         .view-btn {
+          min-width: 44px;
+          min-height: 44px;
           padding: 7px 10px;
           background: transparent;
           border: none;
@@ -572,7 +734,8 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
         }
 
         .filter-chip {
-          padding: 4px 12px;
+          min-height: 44px;
+          padding: 8px 12px;
           background: rgba(255,255,255,0.04);
           border: 1px solid var(--border-subtle);
           border-radius: 9999px;
@@ -632,6 +795,55 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
           font-size: 14px;
           color: var(--text-muted);
           max-width: 360px;
+        }
+
+        .quick-entry-start {
+          width: min(100%, 620px);
+          margin-top: 28px;
+        }
+
+        .quick-entry-label {
+          display: block;
+          margin-bottom: 10px;
+          color: var(--text-muted);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+
+        .quick-entry-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .quick-entry-link {
+          display: flex;
+          min-height: 76px;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 8px;
+          color: var(--text-secondary);
+          background: var(--bg-card);
+          border: 1px solid var(--border-card);
+          border-radius: var(--radius-md);
+          font-size: 12px;
+          font-weight: 600;
+          text-decoration: none;
+          transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+        }
+
+        .quick-entry-link svg {
+          color: var(--brand-blue-bright);
+        }
+
+        .quick-entry-link:hover {
+          transform: translateY(-2px);
+          background: var(--bg-card-hover);
+          border-color: var(--border-default);
         }
 
         /* Table view */
@@ -743,8 +955,18 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
             padding: 24px 16px 20px;
           }
 
+          .dashboard-hero-heading {
+            align-items: flex-start;
+            gap: 14px;
+          }
+
           .dashboard-hero-title {
-            font-size: 24px;
+            font-size: 28px;
+          }
+
+          .dashboard-new-entry {
+            min-height: 44px;
+            padding-inline: 12px;
           }
 
           .dashboard-toolbar {
@@ -753,6 +975,21 @@ export default function DashboardClient({ initialEntries, categories, pageTitle,
 
           .dashboard-entries {
             padding: 16px;
+          }
+
+          .quick-entry-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 480px) {
+          .dashboard-hero-heading {
+            flex-direction: column;
+          }
+
+          .dashboard-toolbar-right {
+            width: 100%;
+            justify-content: space-between;
           }
         }
       `}</style>

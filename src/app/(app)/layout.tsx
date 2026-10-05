@@ -15,17 +15,20 @@ export default async function AppLayout({
   if (!user) {
     redirect("/login");
   }
+  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
+  const isOwner = Boolean(ownerEmail && user.email?.toLowerCase() === ownerEmail);
 
   // Fetch entries for command palette (id + title + tags + type only)
-  const { data: entries } = await supabase
+  const { data: entries, error } = await supabase
     .from("entries")
     .select("id, title, tags, type, category_id")
     .is("deleted_at", null)
     .order("updated_at", { ascending: false })
     .limit(500);
+  if (error) throw error;
 
   return (
-    <ShellLayout user={user} entries={entries ?? []}>
+    <ShellLayout user={user} entries={entries} isOwner={isOwner}>
       {children}
     </ShellLayout>
   );

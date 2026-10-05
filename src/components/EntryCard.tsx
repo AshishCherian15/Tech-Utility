@@ -5,6 +5,7 @@ import { Star, Pin, Copy, Check, Terminal, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { Entry } from "@/lib/types";
 import { formatRelativeDate, truncate } from "@/lib/utils";
+import { useImageUrls } from "@/lib/use-image-urls";
 
 interface EntryCardProps {
   entry: Entry;
@@ -24,6 +25,7 @@ const CARD_COLORS: Record<string, string> = {
 
 export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
   const [copied, setCopied] = useState(false);
+  const imageUrls = useImageUrls(entry.images ?? []);
 
   const cardBg = entry.color ? CARD_COLORS[entry.color] ?? "var(--bg-card)" : "var(--bg-card)";
 
@@ -98,12 +100,14 @@ export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
       </div>
 
       {/* Xiaomi Notes style top image preview */}
-      {entry.images && entry.images.length > 0 && (
+      {imageUrls[0] && (
         <div style={{ margin: "-16px -16px 4px -16px", height: 130, overflow: "hidden", borderBottom: "1px solid var(--border-card)", position: "relative" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={entry.images[0]}
+            src={imageUrls[0]}
             alt={entry.title}
+            loading="lazy"
+            decoding="async"
             style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s ease" }}
           />
           {entry.command_snippet && (

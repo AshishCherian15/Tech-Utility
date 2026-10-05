@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Star, FolderOpen, Trash2, Settings, ArrowRight, Command } from "lucide-react";
+import { Search, Plus, Star, FolderOpen, Trash2, Settings, ArrowRight, Command, X } from "lucide-react";
 import type { Entry } from "@/lib/types";
 
 interface CommandPaletteProps {
@@ -23,6 +23,8 @@ export default function CommandPalette({ entries }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
 
   // Ctrl+K / Cmd+K to open
@@ -30,18 +32,31 @@ export default function CommandPalette({ entries }: CommandPaletteProps) {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
-        setOpen(o => !o);
-        setQuery("");
-        setSelected(0);
+        if (open) {
+          setOpen(false);
+        } else {
+          previouslyFocusedRef.current = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+          setQuery("");
+          setSelected(0);
+          setOpen(true);
+        }
       }
-      if (e.key === "Escape") setOpen(false);
+      if (open && e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [open]);
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+    if (open) {
+      const timeout = window.setTimeout(() => inputRef.current?.focus(), 0);
+      return () => window.clearTimeout(timeout);
+    }
+
+    previouslyFocusedRef.current?.focus();
+    previouslyFocusedRef.current = null;
   }, [open]);
 
   const entryResults = query.trim()
@@ -81,19 +96,39 @@ export default function CommandPalette({ entries }: CommandPaletteProps) {
     }
   };
 
+  const handleTabTrap = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Tab") {
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'input:not([disabled]), button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  };
+
   if (!open) return null;
 
-  let groupRendered: Record<string, boolean> = {};
+  const groupRendered: Record<string, boolean> = {};
 
   return (
     <>
       <div className="palette-overlay" onClick={() => setOpen(false)} />
-      <div className="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+      <div ref={dialogRef} className="palette" role="dialog" aria-modal="true" aria-label="Command palette" onKeyDown={handleTabTrap}>
         <div className="palette-search">
-          <Search size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+          <Search size={16} aria-hidden="true" style={{ color: "var(--text-muted)", flexShrink: 0 }} />
           <input
             ref={inputRef}
             className="palette-input"
+            aria-label="Search entries or commands"
             placeholder="Search entries or type a command…"
             value={query}
             onChange={e => { setQuery(e.target.value); setSelected(0); }}
@@ -101,9 +136,17 @@ export default function CommandPalette({ entries }: CommandPaletteProps) {
             autoComplete="off"
           />
           <kbd className="palette-esc">Esc</kbd>
+          <button
+            type="button"
+            className="palette-close"
+            onClick={() => setOpen(false)}
+            aria-label="Close command palette"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
         </div>
 
-        <div className="palette-results">
+        <div className="palette-results" aria-live="polite">
           {allResults.length === 0 ? (
             <div className="palette-empty">No results for &ldquo;{query}&rdquo;</div>
           ) : (
@@ -117,12 +160,13 @@ export default function CommandPalette({ entries }: CommandPaletteProps) {
                     <div className="palette-group-label">{item.group}</div>
                   )}
                   <button
+                    type="button"
                     className={`palette-item ${i === selected ? "palette-item-active" : ""}`}
                     onClick={() => handleSelect(item.href)}
                     onMouseEnter={() => setSelected(i)}
                   >
                     <span className="palette-item-icon">
-                      {Icon ? <Icon size={14} /> : <ArrowRight size={14} />}
+                      {Icon ? <Icon size={14} aria-hidden="true" /> : <ArrowRight size={14} aria-hidden="true" />}
                     </span>
                     <span className="palette-item-label">{item.label}</span>
                     {i === selected && (
@@ -174,12 +218,38 @@ export default function CommandPalette({ entries }: CommandPaletteProps) {
           to   { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
         }
 
+        @media (prefers-reduced-motion: reduce) {
+          .palette-overlay,
+          .palette {
+            animation: none;
+          }
+        }
+
         .palette-search {
           display: flex;
           align-items: center;
           gap: 12px;
           padding: 16px 20px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .palette-close {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 44px;
+          width: 44px;
+          height: 44px;
+          border: 0;
+          border-radius: var(--radius-sm);
+          background: transparent;
+          color: var(--text-secondary);
+          cursor: pointer;
+        }
+
+        .palette-close:hover {
+          background: rgba(255,255,255,0.08);
+          color: var(--text-primary);
         }
 
         .palette-input {

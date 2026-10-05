@@ -1,5 +1,0 @@
-User-agent: *
-Disallow: /
-
-# Private Application — Ash-Tech
-# Prevents web crawlers and search engine indexing to guarantee privacy.

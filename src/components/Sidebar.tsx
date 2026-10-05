@@ -12,16 +12,21 @@ import {
   Zap,
   Star,
   Clock,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useToast } from "@/components/Toast";
+import BrandMark from "@/components/BrandMark";
 
 interface SidebarProps {
   user: User;
+  isOwner: boolean;
 }
 
-const navItems = [
+const baseNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/categories", icon: FolderOpen, label: "Categories" },
   { href: "/trash", icon: Trash2, label: "Trash" },
@@ -30,33 +35,47 @@ const navItems = [
 
 const quickLinks = [
   { href: "/favorites", icon: Star, label: "Favorites" },
-  { href: "/dashboard?filter=recent", icon: Clock, label: "Recently Viewed" },
+  { href: "/dashboard?sort=recently_edited", icon: Clock, label: "Recently Edited" },
 ];
 
-export default function Sidebar({ user }: SidebarProps) {
+export default function Sidebar({ user, isOwner }: SidebarProps) {
   const pathname = usePathname();
+  const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const { error: toastError } = useToast();
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toastError("Could not sign out. Please try again.");
+        return;
+      }
+      router.replace("/login");
+    } catch {
+      toastError("Could not sign out. Please try again.");
+    } finally {
+      setSigningOut(false);
+    }
   };
 
   const avatarUrl = user.user_metadata?.avatar_url;
   const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Ash";
+  const navItems = isOwner
+    ? [...baseNavItems.slice(0, 3), { href: "/users", icon: Users, label: "User accounts" }, baseNavItems[3]]
+    : baseNavItems;
 
   return (
     <aside className="sidebar">
       {/* Logo */}
       <div className="sidebar-logo" style={{ padding: "16px", gap: 14 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, overflow: "hidden", background: "rgba(59,130,246,0.1)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Ash-Tech Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-        </div>
+        <BrandMark size={48} />
         <div>
-          <div className="sidebar-logo-name" style={{ fontSize: 18, fontWeight: 800 }}>Ash-Tech</div>
-          <div className="sidebar-logo-sub" style={{ fontSize: 12 }}>Tech Memory</div>
+          <div className="sidebar-logo-name" style={{ fontSize: 18, fontWeight: 800 }}>Tech-Utility</div>
+          <div className="sidebar-logo-sub" style={{ fontSize: 12 }}>Private tech library</div>
         </div>
       </div>
 
@@ -69,7 +88,7 @@ export default function Sidebar({ user }: SidebarProps) {
       </div>
 
       {/* Main nav */}
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" aria-label="Main navigation">
         <div className="sidebar-nav-section">
           <div className="sidebar-nav-label">Navigation</div>
           {navItems.map(({ href, icon: Icon, label }) => (
@@ -77,8 +96,9 @@ export default function Sidebar({ user }: SidebarProps) {
               key={href}
               href={href}
               className={cn("sidebar-nav-item", pathname === href && "sidebar-nav-item-active")}
+              aria-current={pathname === href ? "page" : undefined}
             >
-              <Icon size={16} />
+              <Icon size={16} aria-hidden="true" />
               {label}
             </Link>
           ))}
@@ -91,8 +111,9 @@ export default function Sidebar({ user }: SidebarProps) {
               key={href}
               href={href}
               className="sidebar-nav-item"
+              aria-current={pathname === href.split("?")[0] && href !== "/dashboard" ? "page" : undefined}
             >
-              <Icon size={16} />
+              <Icon size={16} aria-hidden="true" />
               {label}
             </Link>
           ))}
@@ -125,11 +146,14 @@ export default function Sidebar({ user }: SidebarProps) {
           <div className="sidebar-user-email">{user.email}</div>
         </div>
         <button
+          type="button"
           onClick={handleSignOut}
+          disabled={signingOut}
+          aria-busy={signingOut}
           className="btn btn-ghost btn-icon"
           data-tooltip="Sign out"
           style={{ marginLeft: "auto", flexShrink: 0, fontSize: 12, color: "var(--text-muted)" }}
-          aria-label="Sign out"
+          aria-label={signingOut ? "Signing out" : "Sign out"}
         >
           ↩
         </button>
@@ -202,6 +226,7 @@ export default function Sidebar({ user }: SidebarProps) {
           display: flex;
           align-items: center;
           gap: 10px;
+          min-height: 44px;
           padding: 9px 10px;
           border-radius: 8px;
           font-size: 13.5px;

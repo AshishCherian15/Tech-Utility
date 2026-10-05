@@ -1,63 +1,138 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { GitBranch, Globe, Zap, Shield, Search, Database } from "lucide-react";
+import Link from "next/link";
+import { GitBranch, Zap, Shield, Search, Database, Eye, EyeOff } from "lucide-react";
+import BrandMark from "@/components/BrandMark";
 
-export default function LoginPage() {
-  const [loading, setLoading] = useState<"google" | "github" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+function getSafeReturnPath(value: string | undefined): string {
+  if (!value?.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return "/dashboard";
+  }
+
+  try {
+    const target = new URL(value, "https://tech-utility.invalid");
+    if (target.origin !== "https://tech-utility.invalid") return "/dashboard";
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return "/dashboard";
+  }
+}
+
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; deleted?: string; signout?: string; next?: string }>;
+}) {
+  const { error: queryError, deleted, signout, next } = use(searchParams);
+  const returnPath = getSafeReturnPath(next);
+  const [loading, setLoading] = useState<"email" | "google" | "github" | "reset" | "signout" | null>(null);
+  const [error, setError] = useState<string | null>(
+    queryError === "recovery"
+      ? "That recovery link is invalid or expired. Request a new password reset link."
+      : queryError === "account_inactive"
+        ? "This account is disabled or has expired. Contact the owner to restore access, or sign in with another account."
+        : queryError === "not_provisioned"
+          ? "This account has not been approved for Tech-Utility. Contact the owner or switch to an account they provisioned."
+          : queryError === "oauth"
+            ? "Sign-in with your provider did not complete. Please try again or use another sign-in method."
+          : null
+  );
+  const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null);
+  const accountDeletedNotice = deleted === "1"
+    ? signout === "failed"
+      ? "Your Tech-Utility account and library data were deleted. Local sign-out may not have completed; close this tab."
+      : "Your Tech-Utility account and library data were deleted."
+    : null;
   const supabase = createClient();
+  const router = useRouter();
 
-  const [authMode, setAuthMode] = useState<"oauth" | "email">("oauth");
+  const [authMode, setAuthMode] = useState<"oauth" | "email">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading("email" as any);
+    setLoading("email");
     setError(null);
-    if (isSignUp) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-      if (error) {
-        setError(error.message);
-        setLoading(null);
-      } else {
-        alert("Account created successfully! Logging you in...");
-        const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
-        if (loginErr) setError(loginErr.message);
-        else window.location.href = "/dashboard";
-      }
-    } else {
+    try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
       if (error) {
-        setError(error.message);
-        setLoading(null);
+        setError("Sign-in failed. Check your email and password, or request a password reset.");
       } else {
-        window.location.href = "/dashboard";
+        router.replace(returnPath);
       }
+    } catch {
+      setError("Sign-in failed. Please try again.");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const requestPasswordReset = async () => {
+    setError(null);
+    setRecoveryNotice(null);
+    if (!email.trim()) {
+      setError("Enter your email address first.");
+      return;
+    }
+
+    setLoading("reset");
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/reset-password")}`,
+      });
+      if (error) {
+        setError("We couldn't confirm the recovery request. Please try again later.");
+        return;
+      }
+      setRecoveryNotice(
+        "If an eligible account uses this email, password recovery instructions will be sent."
+      );
+    } catch {
+      setError("We couldn't confirm the recovery request. Check your connection and try again.");
+    } finally {
+      setLoading(null);
     }
   };
 
   const signIn = async (provider: "google" | "github") => {
     setLoading(provider);
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnPath)}`,
+        },
+      });
+      if (error) {
+        setError("Could not start sign-in with this provider. Please try again.");
+        setLoading(null);
+      }
+    } catch {
+      setError("Could not start sign-in. Check your connection and try again.");
+      setLoading(null);
+    }
+  };
+
+  const switchAccount = async () => {
+    setLoading("signout");
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error) throw error;
+      setError("Signed out. Choose an account provisioned by the owner.");
+      router.refresh();
+    } catch {
+      setError("Could not sign out. Close this tab or try again.");
+    } finally {
       setLoading(null);
     }
   };
@@ -71,16 +146,13 @@ export default function LoginPage() {
         <div className="login-bg-grid" />
       </div>
 
-      <div className="login-container">
+      <main className="login-container">
         {/* Logo & brand */}
         <div className="login-brand">
-          <div className="login-logo" style={{ background: "transparent", boxShadow: "none" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Ash-Tech Logo" style={{ width: "100%", height: "100%", borderRadius: 16, objectFit: "contain" }} />
-          </div>
+          <div className="login-logo"><BrandMark size={56} /></div>
           <div className="login-brand-text">
-            <h1 className="login-title">Ash-Tech</h1>
-            <p className="login-tagline">Your private tech memory</p>
+            <h1 className="login-title">Tech-Utility</h1>
+            <p className="login-tagline">Your private tech library</p>
           </div>
         </div>
 
@@ -92,26 +164,51 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="login-error">
+            <div className="login-error" role="alert" aria-live="assertive">
               <Shield size={14} />
               {error}
             </div>
           )}
+          {(queryError === "not_provisioned" || queryError === "account_inactive") && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={switchAccount}
+              disabled={!!loading}
+              style={{ width: "100%", minHeight: 44, marginBottom: 16 }}
+            >
+              {loading === "signout" ? "Signing out…" : "Sign out and switch account"}
+            </button>
+          )}
+          {accountDeletedNotice && (
+            <p role="status" aria-live="polite" style={{ marginBottom: 16, color: "var(--text-secondary)" }}>
+              {accountDeletedNotice}
+            </p>
+          )}
+          {recoveryNotice && (
+            <p role="status" aria-live="polite" style={{ marginBottom: 16, color: "var(--text-secondary)" }}>
+              {recoveryNotice}
+            </p>
+          )}
 
           {/* Mode Switcher */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 20, background: "rgba(255,255,255,0.03)", padding: 4, borderRadius: 10 }}>
+          <div role="group" aria-label="Sign-in method" style={{ display: "flex", gap: 8, marginBottom: 20, background: "rgba(255,255,255,0.03)", padding: 4, borderRadius: 10 }}>
             <button
+              type="button"
               onClick={() => setAuthMode("oauth")}
+              aria-pressed={authMode === "oauth"}
               style={{
                 flex: 1, padding: "8px 12px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer",
                 background: authMode === "oauth" ? "var(--bg-card)" : "transparent",
                 color: authMode === "oauth" ? "var(--text-primary)" : "var(--text-muted)",
               }}
             >
-              OAuth Login
+              Google or GitHub
             </button>
             <button
+              type="button"
               onClick={() => setAuthMode("email")}
+              aria-pressed={authMode === "email"}
               style={{
                 flex: 1, padding: "8px 12px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer",
                 background: authMode === "email" ? "var(--bg-card)" : "transparent",
@@ -125,8 +222,12 @@ export default function LoginPage() {
           {authMode === "email" ? (
             <form onSubmit={handleEmailAuth} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <input
+                id="login-email"
                 type="email"
                 placeholder="Your Email"
+                aria-label="Email address"
+                autoComplete="username"
+                inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -135,34 +236,44 @@ export default function LoginPage() {
                   border: "1px solid var(--border-subtle)", color: "var(--text-primary)", fontSize: 14,
                 }}
               />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{
-                  width: "100%", padding: "12px 14px", borderRadius: 10, background: "var(--bg-base)",
-                  border: "1px solid var(--border-subtle)", color: "var(--text-primary)", fontSize: 14,
-                }}
-              />
+              <div className="login-password-field">
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  aria-label="Password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="login-password-toggle"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
+                </button>
+              </div>
               <button
                 type="submit"
                 disabled={!!loading}
                 className="btn btn-primary"
                 style={{ width: "100%", padding: "12px", borderRadius: 10, marginTop: 4, fontWeight: 600 }}
               >
-                {loading === ("email" as any) ? (isSignUp ? "Creating Account..." : "Signing in...") : (isSignUp ? "Create Account & Sign In" : "Sign In with Password")}
+                {loading === "email" ? "Signing in…" : "Sign in"}
               </button>
-              <div style={{ textAlign: "center", marginTop: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  style={{ background: "none", border: "none", color: "var(--brand-blue-bright)", fontSize: 13, cursor: "pointer", textDecoration: "underline" }}
-                >
-                  {isSignUp ? "Already have an account? Sign In" : "First time logging in? Create account"}
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn"
+                disabled={!!loading}
+                onClick={requestPasswordReset}
+                style={{ minHeight: 44, color: "var(--text-accent)" }}
+              >
+                {loading === "reset" ? "Sending instructions..." : "Forgot password?"}
+              </button>
             </form>
           ) : (
             <div className="login-buttons">
@@ -184,6 +295,15 @@ export default function LoginPage() {
                 )}
                 Continue with Google
               </button>
+              <button
+                id="btn-sign-in-github"
+                className="login-btn login-btn-github"
+                onClick={() => signIn("github")}
+                disabled={!!loading}
+              >
+                {loading === "github" ? <div className="login-spinner" /> : <GitBranch size={18} />}
+                Continue with GitHub
+              </button>
             </div>
           )}
 
@@ -194,7 +314,7 @@ export default function LoginPage() {
           <div className="login-features">
             <div className="login-feature">
               <Search size={14} />
-              <span>Instant search across all entries</span>
+              <span>Instant search across your knowledge base</span>
             </div>
             <div className="login-feature">
               <Database size={14} />
@@ -206,15 +326,20 @@ export default function LoginPage() {
             </div>
             <div className="login-feature">
               <Shield size={14} />
-              <span>Private, owner-only access</span>
+              <span>Private, per-account data access</span>
             </div>
           </div>
         </div>
 
         <p className="login-footer">
-          No public sign-up · Personal tool by Ash
+          Private workspace · Sign-in is for invited accounts only
         </p>
-      </div>
+        <nav className="login-legal-links" aria-label="Legal information">
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+          <Link href="/cookies">Cookies</Link>
+        </nav>
+      </main>
 
       <style>{`
         .login-page {
@@ -294,44 +419,45 @@ export default function LoginPage() {
         .login-logo {
           width: 56px;
           height: 56px;
-          background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: grid;
+          place-items: center;
+          flex: 0 0 56px;
+        }
+
+        .login-password-field {
           position: relative;
-          box-shadow: 0 0 30px rgba(59,130,246,0.5);
-          flex-shrink: 0;
         }
 
-        .login-logo-letter {
-          font-size: 28px;
-          font-weight: 800;
-          color: white;
-          font-family: 'Inter', sans-serif;
-          line-height: 1;
-          letter-spacing: -1px;
+        .login-password-field input {
+          width: 100%;
+          padding: 12px 48px 12px 14px;
+          border-radius: 10px;
+          background: var(--bg-base);
+          border: 1px solid var(--border-subtle);
+          color: var(--text-primary);
+          font-size: 14px;
         }
 
-        .login-logo-circuit {
+        .login-password-toggle {
           position: absolute;
-          top: 6px;
-          right: 6px;
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
+          top: 50%;
+          right: 7px;
+          display: grid;
+          place-items: center;
+          width: 36px;
+          height: 36px;
+          transform: translateY(-50%);
+          border: 0;
+          border-radius: 8px;
+          color: var(--text-muted);
+          background: transparent;
+          cursor: pointer;
         }
 
-        .login-logo-circuit span {
-          display: block;
-          height: 2px;
-          border-radius: 2px;
-          background: rgba(255,255,255,0.6);
+        .login-password-toggle:hover {
+          color: var(--text-primary);
+          background: var(--bg-card-hover);
         }
-
-        .login-logo-circuit span:nth-child(1) { width: 12px; }
-        .login-logo-circuit span:nth-child(2) { width: 8px; }
-        .login-logo-circuit span:nth-child(3) { width: 10px; }
 
         .login-brand-text h1 {
           font-size: 28px;

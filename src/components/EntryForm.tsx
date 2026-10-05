@@ -2,16 +2,19 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles, Plus, X, Upload, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { Link2, Sparkles, Plus, X, Upload, Loader2 } from "lucide-react";
+import BackLink from "@/components/BackLink";
 import type { Category, Entry, EntryType, DifficultyLevel, Platform } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
+import { useImageUrls } from "@/lib/use-image-urls";
 
 const ENTRY_TYPES: EntryType[] = ["Tip","Trick","Hack","App","Website","Tool","Extension","Command","Guide","Prompt"];
 const DIFFICULTY_LEVELS: DifficultyLevel[] = ["Easy", "Medium", "Hard"];
 const PLATFORMS: Platform[] = ["Windows","Android","iOS","macOS","Linux","Web","Cross-platform"];
+const MAX_TAGS = 100;
+const MAX_TAG_LENGTH = 100;
 const COLORS = [
   { label: "Blue", value: "#blue" },
   { label: "Purple", value: "#purple" },
@@ -28,12 +31,38 @@ const COLOR_MAP: Record<string, string> = {
   "#teal": "#14b8a6", "#red": "#ef4444",
 };
 
+async function optimizeImage(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const maxDimension = 2000;
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) return file;
+
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const optimized = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/webp", 0.82)
+    );
+    if (!optimized || optimized.size >= file.size) return file;
+
+    const baseName = file.name.replace(/\.[^.]+$/, "");
+    return new File([optimized], `${baseName}.webp`, { type: "image/webp" });
+  } finally {
+    bitmap.close();
+  }
+}
+
 interface EntryFormProps {
   categories: Category[];
   entry?: Entry;
+  sharedContent?: { title?: string; text?: string; url?: string };
+  initialType?: EntryType;
 }
 
-export default function EntryForm({ categories, entry }: EntryFormProps) {
+export default function EntryForm({ categories, entry, sharedContent, initialType }: EntryFormProps) {
   const isEdit = !!entry;
   const router = useRouter();
   const supabase = createClient();
@@ -47,14 +76,21 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
   const [aiInput, setAiInput] = useState("");
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
+  const [showLinkPanel, setShowLinkPanel] = useState(false);
+  const [linkPreviewUrl, setLinkPreviewUrl] = useState("");
+  const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
 
   // Form state
+  const sharedDetails = [
+    sharedContent?.text,
+    sharedContent?.url ? `Shared URL: ${sharedContent.url}` : "",
+  ].filter(Boolean).join("\n\n").slice(0, 10000);
   const [form, setForm] = useState({
-    title: entry?.title ?? "",
+    title: entry?.title ?? sharedContent?.title ?? "",
     category_id: entry?.category_id ?? "",
-    type: (entry?.type ?? "Tip") as EntryType,
+    type: entry?.type ?? initialType ?? "Tip",
     tags: entry?.tags ?? [] as string[],
-    what_it_is: entry?.what_it_is ?? "",
+    what_it_is: entry?.what_it_is ?? sharedDetails,
     why_useful: entry?.why_useful ?? "",
     who_can_use: entry?.who_can_use ?? "",
     when_to_use: entry?.when_to_use ?? "",
@@ -66,13 +102,14 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
     images: entry?.images ?? [] as string[],
     color: entry?.color ?? "",
   });
+  const imageUrls = useImageUrls(form.images);
 
   const set = (key: string, value: unknown) =>
     setForm(prev => ({ ...prev, [key]: value }));
 
   const addTag = () => {
-    const t = tagInput.trim().toLowerCase();
-    if (t && !form.tags.includes(t)) {
+    const t = tagInput.trim().toLowerCase().slice(0, MAX_TAG_LENGTH);
+    if (t && !form.tags.includes(t) && form.tags.length < MAX_TAGS) {
       set("tags", [...form.tags, t]);
     }
     setTagInput("");
@@ -84,31 +121,46 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const allowedImageTypes = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"];
+    if (!allowedImageTypes.includes(file.type) || file.size > 10 * 1024 * 1024) {
+      toastError("Choose an image smaller than 10 MB");
+      e.target.value = "";
+      return;
+    }
     setUploadingImg(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const ext = file.name.split(".").pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
+      if (!user) {
+        toastError("Sign in again before uploading an image");
+        return;
+      }
+      const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "img";
+      const uploadFile = await optimizeImage(file);
+      const uploadExtension = uploadFile.name.split(".").pop()?.toLowerCase() || ext;
+      const path = `${user.id}/${crypto.randomUUID()}.${uploadExtension}`;
       const { error } = await supabase.storage
         .from("entry-images")
-        .upload(path, file, { cacheControl: "3600", upsert: false });
-      if (!error) {
-        const { data } = supabase.storage.from("entry-images").getPublicUrl(path);
-        set("images", [...form.images, data.publicUrl]);
+        .upload(path, uploadFile, { cacheControl: "3600", upsert: false, contentType: uploadFile.type });
+      if (error) {
+        toastError("Image upload failed");
+      } else {
+        set("images", [...form.images, `storage://entry-images/${path}`]);
       }
+    } catch {
+      toastError("Image upload failed");
     } finally {
       setUploadingImg(false);
+      e.target.value = "";
     }
   };
 
   const handleAiAutofill = async () => {
     if (!aiInput.trim()) return;
     setAiLoading(true);
-    const customKey = typeof window !== "undefined" ? localStorage.getItem("ash_custom_ai_key") || undefined : undefined;
-    const customProvider = typeof window !== "undefined" ? localStorage.getItem("ash_ai_provider") || "groq" : "groq";
 
     try {
+      const customProvider = localStorage.getItem("ash_ai_provider") === "gemini" ? "gemini" : "groq";
+      const customKey = localStorage.getItem(customProvider === "gemini" ? "ash_gemini_key" : "ash_groq_key") || undefined;
       const res = await fetch("/api/autofill", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -142,8 +194,40 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
         setShowAiPanel(false);
         toastAi("Fields drafted — review everything before saving");
       }
+    } catch {
+      toastError("AI autofill could not connect. Check your connection or fill the form manually.");
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handleLinkPreview = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!linkPreviewUrl.trim()) return;
+
+    setLinkPreviewLoading(true);
+    try {
+      const res = await fetch("/api/link-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: linkPreviewUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error ?? "Preview fetch failed");
+
+      setForm(prev => ({
+        ...prev,
+        title: data.title || prev.title,
+        what_it_is: data.description || prev.what_it_is,
+        images: data.image && !prev.images.includes(data.image) ? [...prev.images, data.image] : prev.images,
+      }));
+      setShowLinkPanel(false);
+      toastAi("Link details added — review them before saving");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Preview fetch failed";
+      toastError(`Could not fetch link preview: ${message}`);
+    } finally {
+      setLinkPreviewLoading(false);
     }
   };
 
@@ -163,70 +247,78 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
       };
 
       if (isEdit) {
-        const { error: err } = await supabase.from("entries").update(payload).eq("id", entry!.id);
-        if (err) { toastError("Failed to save changes"); return; }
+        const response = await fetch(`/api/entries/${entry!.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => null);
+          toastError(result?.error ?? "Failed to save changes");
+          return;
+        }
         success("Changes saved!");
         router.push(`/entries/${entry!.id}`);
       } else {
-        const { data, error: err } = await supabase.from("entries").insert(payload).select().single();
-        if (err) { toastError("Failed to create entry"); return; }
+        const response = await fetch("/api/entries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          toastError(data?.error ?? "Failed to create entry");
+          return;
+        }
         success("Entry created! ✨");
         if (data) router.push(`/entries/${data.id}`);
         else router.push("/dashboard");
       }
+    } catch {
+      toastError(isEdit
+        ? "Could not save changes. Check your connection and try again."
+        : "Could not create the entry. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="entry-form-page">
+    <div className="entry-form-page" aria-busy={saving || uploadingImg || aiLoading}>
       {/* Header */}
       <div className="entry-form-header">
-        <Link href={isEdit ? `/entries/${entry!.id}` : "/dashboard"} className="btn btn-ghost btn-sm">
-          <ArrowLeft size={15} />
+        <BackLink href={isEdit ? `/entries/${entry!.id}` : "/dashboard"}>
           {isEdit ? "Back to entry" : "Back"}
-        </Link>
+        </BackLink>
         <h1 className="entry-form-title">{isEdit ? "Edit Entry" : "New Entry"}</h1>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="entry-form-tools">
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            onClick={async () => {
-              const urlPrompt = prompt("Enter website URL to generate Link Preview metadata:");
-              if (!urlPrompt) return;
-              try {
-                const res = await fetch("/api/link-preview", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ url: urlPrompt }),
-                });
-                const data = await res.json();
-                if (data.error) throw new Error(data.error);
-                setForm(prev => ({
-                  ...prev,
-                  title: data.title || prev.title,
-                  what_it_is: data.description || prev.what_it_is,
-                  images: data.image ? [...prev.images, data.image] : prev.images,
-                }));
-                toastAi("✅ Link metadata and preview image loaded!");
-              } catch (err: unknown) {
-                const msg = err instanceof Error ? err.message : "Preview fetch failed";
-                toastError(`Could not fetch link preview: ${msg}`);
-              }
+            onClick={() => {
+              setShowLinkPanel(value => !value);
+              setShowAiPanel(false);
             }}
+            aria-expanded={showLinkPanel}
+            aria-controls="link-preview-panel"
             id="btn-link-preview"
           >
-            🌐 Link Preview
+            <Link2 size={14} aria-hidden="true" />
+            Link preview
           </button>
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            onClick={() => setShowAiPanel(!showAiPanel)}
+            onClick={() => {
+              setShowAiPanel(value => !value);
+              setShowLinkPanel(false);
+            }}
+            aria-expanded={showAiPanel}
+            aria-controls="ai-autofill-panel"
             id="btn-ai-autofill"
           >
-            <Sparkles size={14} style={{ color: "#a78bfa" }} />
-            AI Autofill
+            <Sparkles size={14} aria-hidden="true" />
+            AI draft
           </button>
           <button
             form="entry-form"
@@ -235,15 +327,51 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
             disabled={saving || !form.title.trim()}
             id="btn-save-entry"
           >
-            {saving ? <Loader2 size={14} className="spin" /> : null}
+            {saving ? <Loader2 size={14} aria-hidden="true" className="spin" /> : null}
             {saving ? "Saving…" : isEdit ? "Save Changes" : "Create Entry"}
           </button>
         </div>
       </div>
 
+      {showLinkPanel && (
+        <form
+          id="link-preview-panel"
+          className="link-preview-panel animate-fade-in"
+          onSubmit={handleLinkPreview}
+          aria-label="Import details from a link"
+        >
+          <div className="link-preview-copy">
+            <Link2 size={18} aria-hidden="true" />
+            <div>
+              <strong>Start from a link</strong>
+              <p>We’ll use its public page title, description, and preview image as editable suggestions.</p>
+            </div>
+          </div>
+          <div className="link-preview-controls">
+            <label className="visually-hidden" htmlFor="link-preview-url">Website URL</label>
+            <input
+              id="link-preview-url"
+              className="input"
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              placeholder="https://example.com/article"
+              value={linkPreviewUrl}
+              onChange={event => setLinkPreviewUrl(event.target.value)}
+              required
+            />
+            <button type="submit" className="btn btn-secondary" disabled={linkPreviewLoading || !linkPreviewUrl.trim()}>
+              {linkPreviewLoading ? <Loader2 size={15} className="spin" aria-hidden="true" /> : <Link2 size={15} aria-hidden="true" />}
+              {linkPreviewLoading ? "Fetching…" : "Fetch details"}
+            </button>
+          </div>
+          <p className="link-preview-note">Nothing is saved until you create the entry. Check suggested details before saving.</p>
+        </form>
+      )}
+
       {/* AI Panel */}
       {showAiPanel && (
-        <div className="ai-panel animate-fade-in">
+        <div id="ai-autofill-panel" className="ai-panel animate-fade-in">
           <div className="ai-panel-header">
             <Sparkles size={16} style={{ color: "#a78bfa" }} />
             <span>AI Autofill — paste a title, link, or description</span>
@@ -254,18 +382,21 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
           <div style={{ display: "flex", gap: 10 }}>
             <textarea
               className="input"
+              aria-label="Text for AI autofill"
               rows={3}
               placeholder="Paste a URL, description, or just the name of a tool/command…"
               value={aiInput}
               onChange={e => setAiInput(e.target.value)}
+              maxLength={20000}
               style={{ resize: "vertical" }}
             />
             <button
+              type="button"
               className="btn btn-primary"
               onClick={handleAiAutofill}
               disabled={aiLoading || !aiInput.trim()}
             >
-              {aiLoading ? <Loader2 size={15} className="spin" /> : <Sparkles size={15} />}
+              {aiLoading ? <Loader2 size={15} aria-hidden="true" className="spin" /> : <Sparkles size={15} aria-hidden="true" />}
               {aiLoading ? "Drafting…" : "Draft"}
             </button>
           </div>
@@ -273,19 +404,29 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
       )}
 
       {aiDrafted && (
-        <div className="ai-drafted-notice animate-fade-in">
-          <Sparkles size={13} />
+        <div className="ai-drafted-notice animate-fade-in" role="status">
+          <Sparkles size={13} aria-hidden="true" />
           Some fields were AI-drafted — please review everything before saving
-          <button className="btn btn-ghost btn-sm" onClick={() => setAiDrafted(false)}>
-            <X size={12} /> Dismiss
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAiDrafted(false)}>
+            <X size={12} aria-hidden="true" /> Dismiss
           </button>
         </div>
       )}
 
       <form id="entry-form" onSubmit={handleSubmit} className="entry-form-body">
+        {!isEdit && (
+          <div className="entry-form-intro">
+            <span className="entry-form-intro-icon"><Plus size={18} aria-hidden="true" /></span>
+            <div>
+              <h2>Capture something useful</h2>
+              <p>Save it now, add detail when you have time. Only a title is required.</p>
+            </div>
+          </div>
+        )}
+
         {/* Required fields */}
         <div className="form-section">
-          <div className="form-section-title">Required</div>
+          <div className="form-section-title">Basics <span>Start with a title and type</span></div>
           <div className="form-grid">
             <div className="form-field form-field-wide">
               <label htmlFor="field-title" className="form-label">
@@ -297,14 +438,13 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
                 placeholder="e.g. Open Advanced Startup Options"
                 value={form.title}
                 onChange={e => set("title", e.target.value)}
+                maxLength={500}
                 required
               />
             </div>
 
             <div className="form-field">
-              <label htmlFor="field-category" className="form-label">
-                Category <span style={{ color: "#f87171" }}>*</span>
-              </label>
+              <label htmlFor="field-category" className="form-label">Category (optional)</label>
               <select
                 id="field-category"
                 className="input"
@@ -340,31 +480,38 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
               <input
                 id="field-tags"
                 className="input"
+                aria-label="Add a tag"
                 placeholder="Type a tag and press Enter"
                 value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+                maxLength={MAX_TAG_LENGTH}
+                disabled={form.tags.length >= MAX_TAGS}
                 style={{ flex: 1 }}
               />
-              <button type="button" className="btn btn-secondary btn-sm" onClick={addTag}>
-                <Plus size={14} />
+              <button type="button" className="btn btn-secondary btn-sm" onClick={addTag} disabled={form.tags.length >= MAX_TAGS || !tagInput.trim()}>
+                <Plus size={14} aria-hidden="true" />
                 Add
               </button>
             </div>
             {form.tags.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+              <div role="group" aria-label={`Tags, ${form.tags.length} of ${MAX_TAGS}`}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                 {form.tags.map(t => (
                   <span key={t} className="tag-pill" style={{ cursor: "default" }}>
                     {t}
                     <button
                       type="button"
+                      aria-label={`Remove tag ${t}`}
                       onClick={() => removeTag(t)}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0, lineHeight: 1 }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 4, minWidth: 44, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}
                     >
-                      <X size={11} />
+                      <X size={11} aria-hidden="true" />
                     </button>
                   </span>
                 ))}
+                </div>
+                <span className="sr-only">{form.tags.length} tags added</span>
               </div>
             )}
           </div>
@@ -389,6 +536,7 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
                   rows={2}
                   value={form[key as keyof typeof form] as string}
                   onChange={e => set(key, e.target.value)}
+                  maxLength={10000}
                   style={{ resize: "vertical" }}
                 />
               </div>
@@ -402,6 +550,7 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
                 rows={4}
                 value={form.how_to_use}
                 onChange={e => set("how_to_use", e.target.value)}
+                maxLength={10000}
                 style={{ resize: "vertical" }}
               />
             </div>
@@ -414,6 +563,7 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
                 rows={2}
                 value={form.example}
                 onChange={e => set("example", e.target.value)}
+                maxLength={10000}
                 style={{ resize: "vertical" }}
               />
             </div>
@@ -433,6 +583,7 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
                 rows={3}
                 value={form.command_snippet}
                 onChange={e => set("command_snippet", e.target.value)}
+                maxLength={10000}
                 style={{ resize: "vertical", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}
               />
             </div>
@@ -458,14 +609,16 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
           <div className="form-section-title">Appearance</div>
           <div className="form-grid">
             <div className="form-field">
-              <label className="form-label">Card Color</label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span className="form-label" id="entry-color-label">Card Color</span>
+              <div role="group" aria-labelledby="entry-color-label" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button
                   type="button"
                   className={cn("color-dot", !form.color && "color-dot-active")}
                   style={{ background: "var(--bg-card-hover)", border: "2px solid var(--border-default)" }}
                   onClick={() => set("color", "")}
                   title="Default"
+                  aria-label="Use default card color"
+                  aria-pressed={!form.color}
                 />
                 {COLORS.map(c => (
                   <button
@@ -475,6 +628,8 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
                     style={{ background: COLOR_MAP[c.value] }}
                     onClick={() => set("color", c.value)}
                     title={c.label}
+                    aria-label={`Use ${c.label} card color`}
+                    aria-pressed={form.color === c.value}
                   />
                 ))}
               </div>
@@ -485,6 +640,7 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
                 <input
                   type="file"
                   ref={fileInputRef}
+                  aria-label="Choose image to upload"
                   accept="image/*"
                   onChange={handleImageUpload}
                   style={{ display: "none" }}
@@ -494,6 +650,7 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
                   className="btn btn-secondary btn-sm"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingImg}
+                  aria-label={uploadingImg ? "Uploading image" : "Upload an image"}
                 >
                   {uploadingImg ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
                   {uploadingImg ? "Uploading…" : "Upload image"}
@@ -504,18 +661,19 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
                   {form.images.map((img, i) => (
                     <div key={i} style={{ position: "relative" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img} alt="" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border-card)" }} />
+                      {imageUrls[i] && <img src={imageUrls[i]} alt={`Entry image ${i + 1}`} loading="lazy" decoding="async" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border-card)" }} />}
                       <button
                         type="button"
+                        aria-label={`Remove image ${i + 1}`}
                         onClick={() => set("images", form.images.filter((_, j) => j !== i))}
                         style={{
                           position: "absolute", top: -6, right: -6,
                           background: "#ef4444", border: "none", borderRadius: "50%",
-                          width: 18, height: 18, display: "flex", alignItems: "center",
+                          width: 44, height: 44, display: "flex", alignItems: "center",
                           justifyContent: "center", cursor: "pointer", color: "#fff",
                         }}
                       >
-                        <X size={10} />
+                        <X size={14} aria-hidden="true" />
                       </button>
                     </div>
                   ))}
@@ -525,6 +683,17 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
           </div>
         </div>
       </form>
+      <div className="entry-mobile-save">
+        <button
+          form="entry-form"
+          type="submit"
+          className="btn btn-primary btn-lg"
+          disabled={saving || !form.title.trim()}
+        >
+          {saving ? <Loader2 size={16} aria-hidden="true" className="spin" /> : null}
+          {saving ? "Saving…" : isEdit ? "Save changes" : "Create entry"}
+        </button>
+      </div>
 
       <style>{`
         .entry-form-page {
@@ -539,10 +708,22 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
           gap: 16px;
           padding: 14px 32px;
           border-bottom: 1px solid var(--border-subtle);
-          background: var(--bg-surface);
+          background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
           position: sticky;
           top: 0;
           z-index: 40;
+        }
+
+        .entry-form-tools {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .entry-form-header .btn-sm {
+          min-height: 42px;
         }
 
         .entry-form-title {
@@ -550,6 +731,50 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
           font-weight: 600;
           color: var(--text-primary);
           flex: 1;
+        }
+
+        .link-preview-panel {
+          display: grid;
+          grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+          gap: 12px 24px;
+          align-items: center;
+          padding: 20px 32px;
+          border-bottom: 1px solid rgba(34, 211, 238, 0.2);
+          background: linear-gradient(110deg, rgba(8, 145, 178, 0.13), rgba(59, 130, 246, 0.05));
+        }
+
+        .link-preview-copy {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          color: var(--brand-cyan);
+        }
+
+        .link-preview-copy strong {
+          display: block;
+          color: var(--text-primary);
+          font-size: 14px;
+        }
+
+        .link-preview-copy p,
+        .link-preview-note {
+          color: var(--text-secondary);
+          font-size: 12px;
+          line-height: 1.55;
+        }
+
+        .link-preview-controls {
+          display: flex;
+          gap: 10px;
+        }
+
+        .link-preview-note {
+          grid-column: 2;
+          margin-top: -8px;
+        }
+
+        .entry-mobile-save {
+          display: none;
         }
 
         .ai-panel {
@@ -596,27 +821,74 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
         }
 
         .entry-form-body {
-          padding: 28px 32px;
+          width: min(100%, 1024px);
+          margin: 0 auto;
+          padding: 28px 32px 48px;
           display: flex;
           flex-direction: column;
-          gap: 28px;
-          max-width: 960px;
+          gap: 18px;
+        }
+
+        .entry-form-intro {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 18px 20px;
+          border: 1px solid var(--border-default);
+          border-radius: var(--radius-lg);
+          background: linear-gradient(125deg, rgba(59, 130, 246, 0.1), rgba(34, 211, 238, 0.035));
+        }
+
+        .entry-form-intro-icon {
+          display: grid;
+          width: 42px;
+          height: 42px;
+          flex: 0 0 42px;
+          place-items: center;
+          border-radius: 13px;
+          color: var(--brand-blue-bright);
+          background: rgba(59, 130, 246, 0.14);
+        }
+
+        .entry-form-intro h2 {
+          color: var(--text-primary);
+          font-size: 15px;
+          font-weight: 700;
+          line-height: 1.35;
+        }
+
+        .entry-form-intro p {
+          margin-top: 3px;
+          color: var(--text-muted);
+          font-size: 13px;
         }
 
         .form-section {
           display: flex;
           flex-direction: column;
           gap: 16px;
+          padding: 20px;
+          background: var(--bg-card);
+          border: 1px solid var(--border-card);
+          border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-card);
         }
 
         .form-section-title {
-          font-size: 12px;
+          display: flex;
+          align-items: baseline;
+          gap: 10px;
+          font-size: 13px;
           font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
           color: var(--text-muted);
-          padding-bottom: 8px;
+          padding-bottom: 12px;
           border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .form-section-title span {
+          color: var(--text-muted);
+          font-size: 12px;
+          font-weight: 400;
         }
 
         .form-grid {
@@ -649,8 +921,8 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
         }
 
         .color-dot {
-          width: 28px;
-          height: 28px;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
           border: 2px solid transparent;
           cursor: pointer;
@@ -672,15 +944,84 @@ export default function EntryForm({ categories, entry }: EntryFormProps) {
         }
 
         @media (max-width: 768px) {
-          .entry-form-header, .entry-form-body, .ai-panel, .ai-drafted-notice {
+          .entry-form-header {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px 12px;
+          }
+          .entry-form-title {
+            grid-column: 2;
+            grid-row: 1;
+          }
+          .entry-form-tools {
+            grid-column: 1 / -1;
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+          }
+          .entry-form-tools .btn {
+            padding-inline: 8px;
+            font-size: 12px;
+          }
+          .entry-form-body, .ai-panel, .ai-drafted-notice {
             padding-left: 16px;
             padding-right: 16px;
+          }
+          .form-section {
+            padding: 16px;
           }
           .form-grid {
             grid-template-columns: 1fr;
           }
           .form-field-wide {
             grid-column: 1;
+          }
+          .link-preview-panel {
+            grid-template-columns: 1fr;
+            padding: 18px 16px;
+          }
+          .link-preview-note {
+            grid-column: 1;
+            margin-top: 0;
+          }
+          .entry-form-header #btn-save-entry {
+            display: none;
+          }
+          .entry-mobile-save {
+            display: block;
+            position: sticky;
+            bottom: 0;
+            z-index: 35;
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+            border-top: 1px solid var(--border-subtle);
+            background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+          }
+          .entry-mobile-save .btn {
+            width: 100%;
+            min-height: 50px;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .entry-form-header {
+            padding: 10px 12px;
+            gap: 8px;
+          }
+          .entry-form-title {
+            font-size: 15px;
+          }
+          .entry-form-tools .btn {
+            min-height: 40px;
+            flex: 1;
+          }
+          .entry-form-intro {
+            align-items: flex-start;
+            padding: 15px;
+          }
+          .link-preview-controls {
+            flex-direction: column;
           }
         }
       `}</style>

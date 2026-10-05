@@ -4,15 +4,22 @@ import CategoriesClient from "@/components/CategoriesClient";
 
 export const metadata: Metadata = {
   title: "Categories",
-  description: "Manage your Ash-Tech entry categories.",
+  description: "Manage your Tech-Utility entry categories.",
 };
 
 export default async function CategoriesPage() {
   const supabase = await createClient();
-  const { data: categories } = await supabase
+  const { data: categories, error } = await supabase
     .from("categories")
-    .select("*")
+    .select("*, entries(count)")
+    .is("entries.deleted_at", null)
     .order("name");
+  if (error) throw error;
 
-  return <CategoriesClient initialCategories={categories ?? []} />;
+  const categoriesWithCounts = categories.map((category) => {
+    const { entries, ...categoryData } = category;
+    return { ...categoryData, entry_count: entries?.[0]?.count ?? 0 };
+  });
+
+  return <CategoriesClient initialCategories={categoriesWithCounts} />;
 }
