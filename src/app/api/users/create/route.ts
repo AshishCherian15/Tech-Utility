@@ -97,22 +97,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Account created but could not verify" }, { status: 500 });
     }
 
-    // If password wasn't set, update it (Supabase sometimes doesn't set password during createUser)
-    // We check by attempting to verify the password via signInWithPassword
-    const { error: signInError } = await admin.auth.signInWithPassword({
-      email: account.email,
+    // Always set the password after creation to ensure it works
+    console.log("Setting password for created user...");
+    const { error: passwordError } = await admin.auth.admin.updateUserById(data.user.id, {
       password: account.password,
+      email_confirm: true,
     });
-
-    if (signInError) {
-      console.log("Password not set during creation, updating manually...");
-      const { error: passwordError } = await admin.auth.admin.updateUserById(data.user.id, {
-        password: account.password,
-      });
-      if (passwordError) {
-        console.error("Failed to set password after creation:", passwordError);
-        return NextResponse.json({ error: "Account created but password could not be set" }, { status: 500 });
-      }
+    if (passwordError) {
+      console.error("Failed to set password after creation:", passwordError);
+      return NextResponse.json({ error: "Account created but password could not be set" }, { status: 500 });
     }
 
     return NextResponse.json({
