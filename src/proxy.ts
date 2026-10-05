@@ -2,6 +2,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function proxy(request: NextRequest) {
+  // Allow auth callback without session check
+  if (request.nextUrl.pathname.startsWith("/auth/callback")) {
+    return NextResponse.next();
+  }
+
   const pathname = request.nextUrl.pathname;
   const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method);
   if (pathname.startsWith("/api/") && isMutation) {
