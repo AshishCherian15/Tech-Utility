@@ -111,19 +111,21 @@ export default function LoginPage({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnPath)}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
+          skipBrowserRedirect: true,
         },
       });
       if (error) {
         console.error('OAuth error:', error);
         setError(`Could not start sign-in with ${provider}. ${error.message}`);
         setLoading(null);
+      } else if (data.url) {
+        console.log('OAuth URL generated:', data.url);
+        // Manually redirect to the OAuth provider
+        window.location.href = data.url;
       } else {
-        console.log('OAuth started successfully');
-        // Browser will handle the redirect
+        console.error('No OAuth URL returned');
+        setError("Could not start sign-in. No OAuth URL returned.");
+        setLoading(null);
       }
     } catch (err) {
       console.error('OAuth exception:', err);
