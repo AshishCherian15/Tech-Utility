@@ -108,7 +108,7 @@ export default function OpenGraphImage() {
             alignItems: "center",
             gap: "8px",
             fontSize: "52",
-            lineHeight: 1.1",
+            lineHeight: "1.1",
             fontWeight: "600",
             color: "#e0e7ff",
           }}

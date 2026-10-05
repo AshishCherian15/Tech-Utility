@@ -17,7 +17,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
   SELECT COALESCE(
-    u.raw_app_meta_data -> 'enabled' = 'true'::JSONB
+    (u.raw_app_meta_data ->> 'enabled')::BOOLEAN = TRUE
     AND (
       (u.raw_app_meta_data ->> 'role' = 'owner'
         AND u.raw_app_meta_data ->> 'account_type' = 'permanent')

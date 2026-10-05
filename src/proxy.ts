@@ -57,7 +57,8 @@ export async function proxy(request: NextRequest) {
   const accountRole = user?.app_metadata?.role;
   const hasProvisionedRole =
     (accountType === "permanent" && accountRole === "permanent_user") ||
-    (accountType === "temporary" && accountRole === "guest_access");
+    (accountType === "temporary" && accountRole === "guest_access") ||
+    (accountType === "permanent" && accountRole === "owner");
   const isProvisioned = Boolean(hasProvisionedRole && typeof user?.app_metadata?.enabled === "boolean");
   const hasAppAccess = Boolean(user && (isOwner || isProvisioned));
 

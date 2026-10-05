@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
-import { Download, Upload, Shield, Loader2, GitBranch, Globe, Eye, EyeOff, UserCheck, UserX, Clock, Trash2 } from "lucide-react";
+import { Download, Upload, Shield, Loader2, GitBranch, Globe, Eye, EyeOff, UserCheck, UserX, Clock, Trash2, Edit2, X } from "lucide-react";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
@@ -24,6 +24,14 @@ interface ManagedAccount {
   enabled: boolean;
   expiresAt: string | null;
   expired: boolean;
+}
+
+interface EditingAccount {
+  account: ManagedAccount;
+  username: string;
+  email: string;
+  password: string;
+  showPassword: boolean;
 }
 
 const accountListSchema = z.object({
@@ -363,6 +371,8 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [editingAccount, setEditingAccount] = useState<EditingAccount | null>(null);
+  const [editFeedback, setEditFeedback] = useState<{ message: string; isError: boolean } | null>(null);
 
   const fetchAccounts = useCallback(async () => {
     const response = await fetch("/api/users", { cache: "no-store" });
@@ -449,6 +459,83 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
     }
   };
 
+  const startEdit = (account: ManagedAccount) => {
+    setEditingAccount({
+      account,
+      username: account.username,
+      email: account.email,
+      password: "",
+      showPassword: false,
+    });
+    setEditFeedback(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingAccount(null);
+    setEditFeedback(null);
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAccount) return;
+
+    setUpdatingId(editingAccount.account.id);
+    setEditFeedback(null);
+
+    try {
+      const body: { action: string; userId: string; username?: string; email?: string; password?: string } = {
+        action: "update",
+        userId: editingAccount.account.id,
+      };
+
+      if (editingAccount.username !== editingAccount.account.username) {
+        body.username = editingAccount.username;
+      }
+      if (editingAccount.email !== editingAccount.account.email) {
+        body.email = editingAccount.email;
+      }
+      if (editingAccount.password) {
+        body.password = editingAccount.password;
+      }
+
+      const response = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const result: unknown = await response.json();
+      if (!response.ok) {
+        const errorResult = z.object({ error: z.string() }).safeParse(result);
+        throw new Error(errorResult.success ? errorResult.data.error : "Could not update account");
+      }
+
+      const updated = z.object({
+        user: z.object({
+          id: z.string(),
+          username: z.string(),
+          email: z.string(),
+        }),
+      }).parse(result);
+
+      setAccounts((current) => current.map((item) =>
+        item.id === editingAccount.account.id
+          ? { ...item, username: updated.user.username, email: updated.user.email }
+          : item
+      ));
+
+      setEditFeedback({ message: "Account updated successfully", isError: false });
+      setTimeout(() => {
+        setEditingAccount(null);
+        setEditFeedback(null);
+      }, 1500);
+    } catch (error) {
+      setEditFeedback({ message: error instanceof Error ? error.message : "Could not update account", isError: true });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   return (
     <div style={{ marginTop: 24, borderTop: "1px solid var(--border-subtle)", paddingTop: 20 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
@@ -523,18 +610,30 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
                     </div>
                   )}
                 </div>
-                <button
-                  type="button"
-                  className={account.enabled ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"}
-                  onClick={() => void toggleAccount(account)}
-                  disabled={updatingId !== null || expired}
-                  aria-label={expired && !account.enabled
-                    ? `Expired account ${account.email}; use Renew to restore access`
-                    : `${account.enabled ? "Disable" : "Enable"} access for ${account.email}`}
-                  style={{ minHeight: 44, flexShrink: 0 }}
-                >
-                  {updatingId === account.id ? "Saving…" : expired && !account.enabled ? "Expired" : account.enabled ? "Disable" : "Enable"}
-                </button>
+                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => startEdit(account)}
+                    disabled={updatingId !== null}
+                    aria-label={`Edit account ${account.email}`}
+                    style={{ minHeight: 44 }}
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={account.enabled ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"}
+                    onClick={() => void toggleAccount(account)}
+                    disabled={updatingId !== null || expired}
+                    aria-label={expired && !account.enabled
+                      ? `Expired account ${account.email}; use Renew to restore access`
+                      : `${account.enabled ? "Disable" : "Enable"} access for ${account.email}`}
+                    style={{ minHeight: 44 }}
+                  >
+                    {updatingId === account.id ? "Saving…" : expired && !account.enabled ? "Expired" : account.enabled ? "Disable" : "Enable"}
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -544,6 +643,141 @@ function AccountAccessList({ refreshKey }: { refreshKey: number }) {
         <p className="settings-row-desc" role="status" style={{ marginTop: 8 }}>
           Showing the first 1,000 accounts. Contact support before managing a larger account list.
         </p>
+      )}
+
+      {/* Edit Account Modal */}
+      {editingAccount && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: 16,
+        }}>
+          <div style={{
+            background: "var(--bg-card)",
+            borderRadius: 16,
+            padding: 24,
+            maxWidth: 480,
+            width: "100%",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            border: "1px solid var(--border-card)",
+            boxShadow: "var(--shadow-elevated)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
+                Edit Account
+              </h3>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 8 }}
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={saveEdit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label htmlFor="edit-username" style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", display: "block", marginBottom: 6 }}>
+                  Username
+                </label>
+                <input
+                  id="edit-username"
+                  type="text"
+                  value={editingAccount.username}
+                  onChange={(e) => setEditingAccount({ ...editingAccount, username: e.target.value })}
+                  className="input"
+                  style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "10px 12px", color: "var(--text-primary)", fontSize: 14 }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-email" style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", display: "block", marginBottom: 6 }}>
+                  Email
+                </label>
+                <input
+                  id="edit-email"
+                  type="email"
+                  value={editingAccount.email}
+                  onChange={(e) => setEditingAccount({ ...editingAccount, email: e.target.value })}
+                  className="input"
+                  style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "10px 12px", color: "var(--text-primary)", fontSize: 14 }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-password" style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", display: "block", marginBottom: 6 }}>
+                  New Password (leave blank to keep current)
+                </label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    id="edit-password"
+                    type={editingAccount.showPassword ? "text" : "password"}
+                    value={editingAccount.password}
+                    onChange={(e) => setEditingAccount({ ...editingAccount, password: e.target.value })}
+                    className="input"
+                    style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "10px 48px 10px 12px", color: "var(--text-primary)", fontSize: 14 }}
+                    placeholder="Enter new password to change"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEditingAccount({ ...editingAccount, showPassword: !editingAccount.showPassword })}
+                    style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 4 }}
+                    aria-label={editingAccount.showPassword ? "Hide password" : "Show password"}
+                  >
+                    {editingAccount.showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {editingAccount.password && (
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                    Password must be 12+ characters with a number and symbol
+                  </p>
+                )}
+              </div>
+
+              {editFeedback && (
+                <div style={{
+                  padding: 10,
+                  borderRadius: 8,
+                  background: editFeedback.isError ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+                  border: `1px solid ${editFeedback.isError ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)"}`,
+                  color: editFeedback.isError ? "#f87171" : "#34d399",
+                  fontSize: 13,
+                }}>
+                  {editFeedback.message}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  disabled={updatingId !== null}
+                  className="btn btn-secondary"
+                  style={{ flex: 1, minHeight: 44 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingId !== null}
+                  className="btn btn-primary"
+                  style={{ flex: 1, minHeight: 44 }}
+                >
+                  {updatingId === editingAccount.account.id ? "Saving…" : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

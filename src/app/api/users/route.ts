@@ -17,6 +17,13 @@ const updateSchema = z.discriminatedUnion("action", [
     userId: z.string().uuid(),
     duration: z.enum(["1h", "6h", "24h", "7d", "30d"]),
   }),
+  z.object({
+    action: z.literal("update"),
+    userId: z.string().uuid(),
+    username: z.string().trim().min(1).max(64).optional(),
+    email: z.string().email().max(320).optional(),
+    password: z.string().min(12).max(128).regex(/^(?=.*\d)(?=.*[^A-Za-z0-9]).+$/).optional(),
+  }),
 ]);
 
 function getExpiresAt(duration: string): string {
@@ -143,6 +150,35 @@ export async function PATCH(request: Request) {
     }
     if (parsed.data.action === "renew" && !isExpiredTemporary) {
       return NextResponse.json({ error: "Only expired temporary accounts can be renewed" }, { status: 409 });
+    }
+
+    if (parsed.data.action === "update") {
+      const updateData: { user_metadata?: { username?: string }; password?: string } = {};
+      if (parsed.data.username) {
+        updateData.user_metadata = { username: parsed.data.username };
+      }
+      if (parsed.data.password) {
+        updateData.password = parsed.data.password;
+      }
+
+      const { data, error } = await admin.auth.admin.updateUserById(account.id, updateData);
+      if (error) {
+        console.error("Supabase admin account update failed:", error.message);
+        return NextResponse.json({ error: "Could not update account" }, { status: 500 });
+      }
+
+      return NextResponse.json(
+        {
+          user: {
+            id: data.user.id,
+            username: typeof data.user.user_metadata?.username === "string"
+              ? data.user.user_metadata.username
+              : data.user.email?.split("@")[0] ?? "Invited user",
+            email: data.user.email ?? "",
+          },
+        },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
     }
 
     const appMetadata = parsed.data.action === "renew"

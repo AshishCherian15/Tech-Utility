@@ -86,6 +86,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Could not create the account" }, { status: 400 });
     }
 
+    // Verify password was set by checking the user
+    const { data: updatedUser, error: verifyError } = await admin.auth.admin.getUserById(data.user.id);
+    if (verifyError || !updatedUser.user) {
+      console.error("Could not verify created user:", verifyError);
+      return NextResponse.json({ error: "Account created but could not verify" }, { status: 500 });
+    }
+
+    // If password wasn't set, update it
+    if (!updatedUser.user.encrypted_password) {
+      console.log("Password not set during creation, updating manually...");
+      const { error: passwordError } = await admin.auth.admin.updateUserById(data.user.id, {
+        password: account.password,
+      });
+      if (passwordError) {
+        console.error("Failed to set password after creation:", passwordError);
+        return NextResponse.json({ error: "Account created but password could not be set" }, { status: 500 });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: `Account created for ${account.email}`,

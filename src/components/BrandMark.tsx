@@ -56,7 +56,7 @@ export default function BrandMark({ size = 40 }: BrandMarkProps) {
         
         {/* Drop shadow */}
         <filter id="drop-shadow" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#4361ee" flood-opacity="0.3" />
+          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#4361ee" floodOpacity="0.3" />
         </filter>
       </defs>
       
