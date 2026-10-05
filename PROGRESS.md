@@ -1,8 +1,8 @@
 # Ash-Tech — Project Progress & AI Agent Handoff Document
 
-> **Last Updated:** October 4, 2026
-> **Repository:** [https://github.com/AshishCherian15/Ash-Tech](https://github.com/AshishCherian15/Ash-Tech)  
-> **Status:** The main application flows are implemented, but the app is **not yet verified or ready for invited-user launch**. The schema is installed on the confirmed staging project; all five tables, RLS flags/policies, the private image bucket, and trusted owner metadata were verified. Local `ASH_OWNER_EMAIL` is configured. Owner Google sign-in and basic entry create/read/soft-delete were smoke-tested; cross-account isolation and the broader authenticated workflows remain untested.
+> **Last Updated:** October 5, 2026
+> **Repository:** [https://github.com/AshishCherian15/Ash-Tech](https://github.com/AshishCherian15/Ash-Tech)
+> **Status:** The main application flows are implemented, but the app is **not yet verified or ready for invited-user launch**. The schema is installed on the confirmed staging project; all five tables, RLS flags/policies, the private image bucket, and trusted owner metadata were verified. Local `ASH_OWNER_EMAIL` is configured. Owner Google sign-in and basic entry create/read/soft-delete were smoke-tested; cross-account isolation and the broader authenticated workflows remain untested. Premium visual design system has been implemented with modern branding.
 
 ---
 
@@ -30,7 +30,8 @@
 - **Xiaomi Notes-Style Card Previews**: Highlighting image header previews for visual entries in [`src/components/EntryCard.tsx`](./src/components/EntryCard.tsx).
 - **Command Palette**: `Ctrl + K` global keyboard shortcut modal in [`src/components/CommandPalette.tsx`](./src/components/CommandPalette.tsx).
 - **Toast Notifications**: Multi-variant notification system (success, error, info, warning, AI).
-- **Branding**: Official 48x48px logo integration across login and sidebar headers.
+- **Premium Visual Design System**: Modern brand palette with 4-stop gradients (blue → deep blue → purple → cyan), enhanced buttons with inner glow and shine effects, refined cards with gradient backgrounds, improved inputs with inset glow, updated navigation with gradient hover states, and comprehensive dark mode support. See [`src/app/globals.css`](./src/app/globals.css) and [`src/components/BrandMark.tsx`](./src/components/BrandMark.tsx).
+- **Redesigned Brand Mark**: Tech-focused logo with stylized "T", bracket elements, circuit patterns, and accent dots. Available as SVG and generated PNG icons (192px, 512px) for PWA integration.
 
 ### ⚠️ Phase 4: AI Autofill & Model Engine (Source implementation complete; provider and quota verification pending)
 - **Dual AI Engine**: Server route [`/api/autofill/route.ts`](./src/app/api/autofill/route.ts) supporting **Groq (Llama 3.3 70B)** and **Google Gemini 2.5 Flash**.
