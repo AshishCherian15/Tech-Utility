@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
 import { useImageUrls } from "@/lib/use-image-urls";
+import { useAIConfig } from "@/components/AIConfigProvider";
 
 const ENTRY_TYPES: EntryType[] = ["Tip","Trick","Hack","App","Website","Tool","Extension","Command","Guide","Prompt"];
 const DIFFICULTY_LEVELS: DifficultyLevel[] = ["Easy", "Medium", "Hard"];
@@ -68,6 +69,7 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { success, error: toastError, ai: toastAi } = useToast();
+  const { config: aiConfig } = useAIConfig();
 
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -156,19 +158,23 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
 
   const handleAiAutofill = async () => {
     if (!aiInput.trim()) return;
+    if (!aiConfig.apiKey.trim()) {
+      toastError("Add an AI API key in Settings before using autofill.");
+      return;
+    }
     setAiLoading(true);
 
     try {
-      const customProvider = localStorage.getItem("ash_ai_provider") === "gemini" ? "gemini" : "groq";
-      const customKey = localStorage.getItem(customProvider === "gemini" ? "ash_gemini_key" : "ash_groq_key") || undefined;
       const res = await fetch("/api/autofill", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           input_type: "text",
           content: aiInput,
-          custom_api_key: customKey,
-          custom_provider: customProvider,
+          provider: aiConfig.provider,
+          api_key: aiConfig.apiKey,
+          model: aiConfig.model,
+          endpoint: aiConfig.endpoint,
         }),
       });
       const draft = await res.json();
@@ -584,7 +590,7 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
                 value={form.command_snippet}
                 onChange={e => set("command_snippet", e.target.value)}
                 maxLength={10000}
-                style={{ resize: "vertical", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}
+                style={{ resize: "vertical", fontFamily: "'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace", fontSize: 13 }}
               />
             </div>
             <div className="form-field">

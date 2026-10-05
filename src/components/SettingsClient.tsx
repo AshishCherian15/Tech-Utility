@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -8,6 +8,7 @@ import { Download, Upload, Shield, Loader2, GitBranch, Globe, Eye, EyeOff, UserC
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
+import { useAIConfig, type AIProvider } from "@/components/AIConfigProvider";
 
 interface SettingsClientProps {
   user: User;
@@ -559,6 +560,136 @@ export function AccountAccessManagement() {
   );
 }
 
+const AI_PROVIDERS: Array<{ value: AIProvider; label: string }> = [
+  { value: "auto", label: "Auto-detect from key" },
+  { value: "openai", label: "OpenAI" },
+  { value: "anthropic", label: "Anthropic" },
+  { value: "gemini", label: "Google Gemini" },
+  { value: "groq", label: "Groq" },
+  { value: "openrouter", label: "OpenRouter" },
+  { value: "deepseek", label: "DeepSeek" },
+  { value: "mistral", label: "Mistral" },
+  { value: "together", label: "Together AI" },
+  { value: "fireworks", label: "Fireworks AI" },
+  { value: "xai", label: "xAI" },
+  { value: "cerebras", label: "Cerebras" },
+  { value: "custom", label: "OpenAI-compatible endpoint" },
+];
+
+function AISettingsPanel() {
+  const { config, updateConfig, clearApiKey } = useAIConfig();
+  const [showKey, setShowKey] = useState(false);
+  const { success } = useToast();
+
+  return (
+    <div className="settings-section">
+      <div className="settings-section-title">AI Autofill &amp; Model Settings</div>
+      <div className="settings-card">
+        <div className="settings-row-title" style={{ marginBottom: 4 }}>Configure your AI provider</div>
+        <div className="settings-row-desc" style={{ marginBottom: 16 }}>
+          Your key is held in memory for this tab and sent only to this app&apos;s authenticated autofill endpoint, which forwards it to the selected provider. It is not saved in browser storage; reloads and sign-outs clear it. Source text is sent to your provider when you request a draft.
+        </div>
+        <div style={{ display: "grid", gap: 14 }}>
+          <div>
+            <label htmlFor="ai-provider" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>Provider</label>
+            <select
+              id="ai-provider"
+              className="input"
+              value={config.provider}
+              onChange={(event) => {
+                const provider = AI_PROVIDERS.find((option) => option.value === event.target.value);
+                if (provider) updateConfig({ provider: provider.value });
+              }}
+              style={{ width: "100%", minHeight: 44 }}
+            >
+              {AI_PROVIDERS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            {config.provider === "auto" && (
+              <p className="settings-row-desc" style={{ marginTop: 6 }}>
+                Auto-detection uses recognizable key prefixes. If your provider uses a generic key format, choose it from the list instead.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="ai-api-key" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>API key</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                id="ai-api-key"
+                type={showKey ? "text" : "password"}
+                autoComplete="off"
+                spellCheck={false}
+                value={config.apiKey}
+                onChange={(event) => updateConfig({ apiKey: event.target.value })}
+                placeholder="Paste your provider API key"
+                className="input"
+                style={{ flex: 1, minWidth: 0 }}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowKey((visible) => !visible)}
+                aria-label={showKey ? "Hide API key" : "Show API key"}
+                aria-pressed={showKey}
+                style={{ minHeight: 44 }}
+              >
+                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+              {config.apiKey && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    clearApiKey();
+                    success("API key cleared from this tab.");
+                  }}
+                  style={{ minHeight: 44 }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="ai-model" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>Model</label>
+            <input
+              id="ai-model"
+              type="text"
+              value={config.model}
+              onChange={(event) => updateConfig({ model: event.target.value })}
+              placeholder={config.provider === "gemini" ? "gemini-2.0-flash (default)" : "Enter the model ID from your provider"}
+              maxLength={200}
+              className="input"
+              style={{ width: "100%" }}
+            />
+            <p className="settings-row-desc" style={{ marginTop: 6 }}>Enter an exact model ID enabled for your API key. Leave blank only to use the default Gemini model.</p>
+          </div>
+
+          {config.provider === "custom" && (
+            <div>
+              <label htmlFor="ai-endpoint" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>OpenAI-compatible HTTPS endpoint</label>
+              <input
+                id="ai-endpoint"
+                type="url"
+                value={config.endpoint}
+                onChange={(event) => updateConfig({ endpoint: event.target.value })}
+                placeholder="https://api.example.com/v1"
+                maxLength={2_000}
+                className="input"
+                style={{ width: "100%" }}
+              />
+              <p className="settings-row-desc" style={{ marginTop: 6 }}>
+                Must resolve to a public HTTPS host; local/private addresses and redirects are blocked. The chat-completions path is added automatically.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsClient({ user, entryCount, isOwner }: SettingsClientProps) {
   const [exporting, setExporting] = useState(false);
   const [importingFile, setImportingFile] = useState(false);
@@ -566,20 +697,10 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
-  const groqKeyInputRef = useRef<HTMLInputElement>(null);
-  const geminiKeyInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
-  const { success, error: toastError, info } = useToast();
-
-  useEffect(() => {
-    if (groqKeyInputRef.current) {
-      groqKeyInputRef.current.value = localStorage.getItem("ash_groq_key") ?? "";
-    }
-    if (geminiKeyInputRef.current) {
-      geminiKeyInputRef.current.value = localStorage.getItem("ash_gemini_key") ?? "";
-    }
-  }, []);
+  const { success, error: toastError } = useToast();
+  const { clearApiKey } = useAIConfig();
 
   const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Ash";
   const avatarUrl = user.user_metadata?.avatar_url;
@@ -655,9 +776,7 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not delete the account");
 
-      localStorage.removeItem("ash_groq_key");
-      localStorage.removeItem("ash_gemini_key");
-      localStorage.removeItem("ash_ai_provider");
+      clearApiKey();
       let signOutFailed = false;
       try {
         const { error } = await supabase.auth.signOut({ scope: "local" });
@@ -678,6 +797,7 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      clearApiKey();
       router.replace("/login");
     } catch {
       toastError("Could not sign out. Check your connection and try again.");
@@ -821,98 +941,7 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
           </div>
         </div>
 
-        {/* AI Model & API Key Configuration */}
-        <div className="settings-section">
-          <div className="settings-section-title">AI Autofill & Model Settings</div>
-          <div className="settings-card">
-            <div className="settings-row-title" style={{ marginBottom: 4 }}>Select Active AI Model & Saved Keys</div>
-            <div className="settings-row-desc" style={{ marginBottom: 16 }}>
-              Configure Groq or Google Gemini API keys. Keys are stored in this browser&apos;s local storage; avoid saving them on shared or untrusted devices.
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Groq Key Row */}
-              <div style={{ background: "rgba(255,255,255,0.02)", padding: 14, borderRadius: 10, border: "1px solid var(--border-subtle)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>⚡ Groq (Llama 3.3 70B Versatile)</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined") localStorage.setItem("ash_ai_provider", "groq");
-                      info("Active AI provider set to Groq.");
-                    }}
-                    className="btn btn-secondary btn-sm"
-                    style={{ fontSize: 11, padding: "4px 8px" }}
-                  >
-                    Set Active
-                  </button>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    type="password"
-                    id="groq-key-input"
-                    ref={groqKeyInputRef}
-                    placeholder="Groq API key"
-                    onChange={(e) => {
-                      localStorage.setItem("ash_groq_key", e.target.value);
-                    }}
-                    style={{ flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const input = document.getElementById("groq-key-input") as HTMLInputElement;
-                      if (input) input.type = input.type === "password" ? "text" : "password";
-                    }}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    👁️ Reveal / Hide
-                  </button>
-                </div>
-              </div>
-
-              {/* Gemini Key Row */}
-              <div style={{ background: "rgba(255,255,255,0.02)", padding: 14, borderRadius: 10, border: "1px solid var(--border-subtle)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>✨ Google Gemini (Gemini 2.5 Flash)</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined") localStorage.setItem("ash_ai_provider", "gemini");
-                      info("Active AI provider set to Google Gemini.");
-                    }}
-                    className="btn btn-secondary btn-sm"
-                    style={{ fontSize: 11, padding: "4px 8px" }}
-                  >
-                    Set Active
-                  </button>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    type="password"
-                    id="gemini-key-input"
-                    ref={geminiKeyInputRef}
-                    placeholder="Google AI API key"
-                    onChange={(e) => {
-                      localStorage.setItem("ash_gemini_key", e.target.value);
-                    }}
-                    style={{ flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 13 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const input = document.getElementById("gemini-key-input") as HTMLInputElement;
-                      if (input) input.type = input.type === "password" ? "text" : "password";
-                    }}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    👁️ Reveal / Hide
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AISettingsPanel />
 
         {/* Security */}
         <div className="settings-section">

@@ -31,8 +31,9 @@ Tech-Utility is a private, login-protected personal knowledge base for **tips, t
 - **Privacy Basics**: No analytics integration, generated `robots.txt` (`Disallow: /`), an intentionally empty sitemap, and `noindex, nofollow` metadata. The private library is not intended for search indexing.
 
 ### 🤖 AI Engine & Model Settings
-- **Dual LLM Provider Engine**: Supports **Groq (Llama 3.3 70B Versatile)** and **Google Gemini 2.5 Flash**, selected in Settings.
-- **AI Provider Settings**: Groq/Gemini keys can be saved in browser local storage; avoid saving them on shared or untrusted devices.
+- **AI Provider Support**: OpenAI, Anthropic, Google Gemini, Groq, OpenRouter, DeepSeek, Mistral, Together AI, Fireworks AI, xAI, Cerebras, and public OpenAI-compatible HTTPS endpoints.
+- **Provider and Model Settings**: Choose a provider, enter the model ID enabled for your key, or use key-prefix auto-detection for common providers. Generic key formats must be selected manually.
+- **Key Handling**: The provider key is held in tab memory only, sent through the authenticated autofill endpoint, and cleared on reload or sign-out. Provider preferences (not keys) may be saved in browser storage. Custom endpoints are DNS-checked, pinned to a validated public address, and cannot redirect.
 - **Strict Human-in-the-Loop Review**: AI drafts entry fields but **never auto-saves** without owner review.
 
 ### 🎨 Visual & Desktop UX
@@ -53,7 +54,7 @@ Tech-Utility is a private, login-protected personal knowledge base for **tips, t
 | **Backend** | Next.js Serverless API Routes · Proxy (`src/proxy.ts`) |
 | **Database** | Supabase Postgres (with RLS on every table) |
 | **Auth** | Supabase Auth — Google/GitHub OAuth + Email/Password (TOTP flow not integrated) |
-| **AI LLM** | Groq (Llama 3.3 70B) & Google Gemini 2.5 Flash |
+| **AI LLM** | User-configured providers; keys are not server environment variables |
 | **Deployment target** | Vercel Serverless (deployment not verified) |
 
 ---
@@ -201,9 +202,9 @@ npm run dev
 On Windows PowerShell, use `Copy-Item .env.example .env.local` instead of `cp`.
 Fill in `.env.local` with the required Supabase project URL and anon key, the
 server-only service role key and owner email for account-management features, and
-your local app URL. Add an AI provider key only if you want server-configured AI
-autofill. Never commit `.env.local` or expose `SUPABASE_SERVICE_ROLE_KEY` to the
-browser.
+your local app URL. AI provider keys are entered by each user in Settings and are
+not configured as server environment variables. Never commit `.env.local` or
+expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
 
 Before starting the app, apply and verify [`database/schema.sql`](./database/schema.sql)
 in the intended Supabase project and provision the owner account's trusted

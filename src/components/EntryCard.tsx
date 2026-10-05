@@ -189,7 +189,7 @@ export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
         }
 
         .entry-card-code {
-          font-family: 'JetBrains Mono', monospace;
+          font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
           font-size: 11.5px;
           color: #93c5fd;
           flex: 1;

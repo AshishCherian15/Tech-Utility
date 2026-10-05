@@ -28,16 +28,16 @@ export default function PrivacyPage() {
       <h2>AI autofill</h2>
       <p>
         AI autofill is optional. When used, the text submitted for drafting and the selected
-        provider key are sent to this app&apos;s server and then to the selected Groq or Google
-        Gemini API. Their service terms and privacy policies also apply. Provider keys entered
-        in Settings are saved in this browser&apos;s local storage; do not save them on shared
-        devices.
+        provider key are sent to this app&apos;s authenticated server endpoint and then to the
+        configured AI provider. Provider terms and privacy policies also apply. The key is held
+        in browser memory only, is not intentionally written to browser storage, and is cleared
+        on page reload or sign-out. Custom OpenAI-compatible endpoints must use public HTTPS.
       </p>
       <h2>Cookies and storage</h2>
       <p>
         Authentication requires session cookies. The app does not currently use analytics or
-        advertising cookies. Provider preference and optional AI keys may be stored in browser
-        local storage.
+        advertising cookies. AI provider, model, and custom endpoint preferences may be stored
+        in browser local storage; API keys are not stored there.
       </p>
       <h2>Hosting and retention</h2>
       <p>
@@ -48,8 +48,8 @@ export default function PrivacyPage() {
       </p>
       <h2>Your choices</h2>
       <p>
-        Users can export their library from Settings, remove optional AI keys from this
-        browser&apos;s local storage, and request permanent deletion of their account, library
+        Users can export their library from Settings, clear the in-memory AI key, and request
+        permanent deletion of their account, library
         data, and uploaded images from Settings by entering the signed-in account&apos;s email as
         confirmation. Deletion is performed by the app&apos;s configured Supabase project.
         Provider backups may retain data under their own retention schedules; this draft notice

@@ -1,11 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
   <defs>
-    <linearGradient id="brand" x1="5" y1="4" x2="43" y2="44" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#4F7CFF"/>
-      <stop offset="1" stop-color="#0EA5B7"/>
+    <linearGradient id="icon-gradient" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4361ee"/>
+      <stop offset="0.35" stop-color="#3f37c9"/>
+      <stop offset="0.7" stop-color="#7209b7"/>
+      <stop offset="1" stop-color="#4cc9f0"/>
     </linearGradient>
+    <linearGradient id="icon-shine" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="rgba(255,255,255,0.5)"/>
+      <stop offset="0.4" stop-color="rgba(255,255,255,0.2)"/>
+      <stop offset="0.7" stop-color="rgba(255,255,255,0.1)"/>
+      <stop offset="1" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+    <linearGradient id="icon-inner" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e0e7ff"/>
+    </linearGradient>
+    <linearGradient id="accent-grad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4cc9f0"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
   </defs>
-  <rect x="1" y="1" width="46" height="46" rx="14" fill="url(#brand)"/>
-  <path d="M12 14.5c0-1.38 1.12-2.5 2.5-2.5h19a2.5 2.5 0 0 1 0 5H27v17a2.5 2.5 0 0 1-5 0V17h-7.5a2.5 2.5 0 0 1-2.5-2.5Z" fill="#fff"/>
-  <circle cx="35" cy="33" r="3" fill="#B8FFF2"/>
+  
+  <rect x="2" y="2" width="96" height="96" rx="24" fill="url(#icon-gradient)" filter="url(#glow)"/>
+  <rect x="2" y="2" width="96" height="96" rx="24" fill="url(#icon-shine)"/>
+  
+  <path d="M26 26H35C36.1046 26 37 26.8954 37 28V33C37 33.1046 36.1046 34 35 34H26V26ZM26 36H35C36.1046 36 37 36.8954 37 37V47C37 47.1046 36.1046 48 35 48H26V36ZM26 50H35C36.1046 50 37 50.8954 37 51V57C37 57.1046 36.1046 58 35 58H26V50Z" fill="url(#icon-inner)"/>
+  
+  <path d="M42 32H51C52.1046 32 53 32.8954 53 33V38C53 38.1046 52.1046 39 51 39H42V32ZM42 40H51C52.1046 40 53 40.8954 53 41V46C53 46.1046 52.1046 47 51 47H42V40Z" fill="rgba(255,255,255,0.7)"/>
+  
+  <circle cx="66" cy="34" r="4" fill="url(#accent-grad)"/>
+  <circle cx="72" cy="44" r="3" fill="url(#accent-grad)"/>
+  <circle cx="68" cy="54" r="4" fill="url(#accent-grad)"/>
+  
+  <path d="M62 27L66 31M61 41L65 45M63 53L67 57" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <rect x="20" y="70" width="60" height="4" rx="2" fill="rgba(255,255,255,0.3)"/>
 </svg>

@@ -62,9 +62,14 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
         }
         setCategories(prev => prev.map(c => c.id === editId ? { ...data, entry_count: c.entry_count } : c));
       } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toastError("Sign in again before creating a category");
+          return;
+        }
         const { data, error } = await supabase
           .from("categories")
-          .insert({ name: form.name, description: form.description, icon: form.icon, color: form.color })
+          .insert({ user_id: user.id, name: form.name, description: form.description, icon: form.icon, color: form.color })
           .select()
           .single();
         if (error || !data) {
@@ -105,7 +110,7 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
       <div className="page-header">
         <div>
           <h1 className="page-title">Categories</h1>
-          <p className="page-sub">{categories.length} categories · organize your entries</p>
+          <p className="page-sub">{categories.length} {categories.length === 1 ? "category" : "categories"} · organize your entries</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={startAdd} id="btn-add-category">
           <Plus size={16} aria-hidden="true" />

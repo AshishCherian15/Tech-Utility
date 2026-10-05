@@ -527,7 +527,7 @@ export default function LoginPage({
           border-radius: 12px;
           font-size: 15px;
           font-weight: 500;
-          font-family: 'Inter', sans-serif;
+          font-family: inherit;
           cursor: pointer;
           transition: all 0.2s ease;
           border: none;

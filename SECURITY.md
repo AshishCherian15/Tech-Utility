@@ -1,6 +1,6 @@
 # Security Policy
 
-**Last reviewed:** 2026-10-04
+**Last reviewed:** 2026-10-05
 
 ## Overview
 

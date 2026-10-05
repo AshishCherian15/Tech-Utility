@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
 import NavigationHistory from "@/components/NavigationHistory";
+import { AIConfigProvider } from "@/components/AIConfigProvider";
 
 const deploymentUrl =
   process.env.NEXT_PUBLIC_APP_URL ??
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#080c14",
+  themeColor: "#4361ee",
   width: "device-width",
   initialScale: 1,
 };
@@ -51,7 +52,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <NavigationHistory />
         <ToastProvider>
-          {children}
+          <AIConfigProvider>{children}</AIConfigProvider>
         </ToastProvider>
       </body>
     </html>

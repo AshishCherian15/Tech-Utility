@@ -218,34 +218,37 @@ export default function DashboardClient({
           </div>
 
           {/* Category chips */}
-          <div className="dashboard-category-chips" role="group" aria-label="Filter by category">
-            <button
-              type="button"
-              className={cn("category-chip", !filterCategory && "category-chip-active")}
-              onClick={() => setFilterCategory("")}
-              aria-pressed={!filterCategory}
-            >
-              All
-            </button>
-            {categories.map(cat => (
+          {totalEntries > 0 && (
+            <div className="dashboard-category-chips" role="group" aria-label="Filter by category">
               <button
-                key={cat.id}
                 type="button"
-                className={cn("category-chip", filterCategory === cat.id && "category-chip-active")}
-                onClick={() => setFilterCategory(filterCategory === cat.id ? "" : cat.id)}
-                aria-pressed={filterCategory === cat.id}
-                style={filterCategory === cat.id ? { borderColor: cat.color } : {}}
+                className={cn("category-chip", !filterCategory && "category-chip-active")}
+                onClick={() => setFilterCategory("")}
+                aria-pressed={!filterCategory}
               >
-                <span aria-hidden="true" style={{ fontSize: 14 }}>{cat.icon}</span>
-                {cat.name}
+                All
               </button>
-            ))}
-          </div>
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={cn("category-chip", filterCategory === cat.id && "category-chip-active")}
+                  onClick={() => setFilterCategory(filterCategory === cat.id ? "" : cat.id)}
+                  aria-pressed={filterCategory === cat.id}
+                  style={filterCategory === cat.id ? { borderColor: cat.color } : {}}
+                >
+                  <span aria-hidden="true" style={{ fontSize: 14 }}>{cat.icon}</span>
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
       {/* Toolbar */}
-      <div className="dashboard-toolbar">
+      {totalEntries > 0 && (
+        <div className="dashboard-toolbar">
         <div className="dashboard-toolbar-left">
           <span className="dashboard-count" role="status" aria-live="polite" aria-atomic="true">
             {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
@@ -328,6 +331,7 @@ export default function DashboardClient({
           </div>
         </div>
       </div>
+      )}
 
       {/* Filters panel */}
       {showFilters && (
@@ -386,7 +390,7 @@ export default function DashboardClient({
       {/* Entry grid/list */}
       <div className="dashboard-entries">
         {filtered.length === 0 ? (
-          <div className="empty-state">
+          <div className={cn("empty-state", !hasActiveCriteria && "empty-state-first-run")}>
             <div className="empty-state-icon">
               {hasActiveCriteria
                 ? <Search size={40} aria-hidden="true" />

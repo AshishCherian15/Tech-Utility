@@ -43,6 +43,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Allow local development HMR
+  ...(process.env.NODE_ENV === "development" ? {
+    allowedDevOrigins: ["127.0.0.1", "localhost"],
+  } : {}),
   // Security headers
   async headers() {
     return [
