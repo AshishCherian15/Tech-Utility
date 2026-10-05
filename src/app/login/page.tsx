@@ -111,21 +111,24 @@ export default function LoginPage({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnPath)}`,
-          skipBrowserRedirect: true,
+          skipBrowserRedirect: false,
         },
       });
       if (error) {
         console.error('OAuth error:', error);
         setError(`Could not start sign-in with ${provider}. ${error.message}`);
         setLoading(null);
-      } else if (data.url) {
-        console.log('OAuth URL generated:', data.url);
-        // Manually redirect to the OAuth provider
-        window.location.href = data.url;
       } else {
-        console.error('No OAuth URL returned');
-        setError("Could not start sign-in. No OAuth URL returned.");
-        setLoading(null);
+        console.log('OAuth started, waiting for redirect...');
+        // Supabase will handle the redirect automatically
+        // If it doesn't redirect within 5 seconds, show error
+        setTimeout(() => {
+          if (loading === provider) {
+            console.error('OAuth redirect timeout');
+            setError("OAuth redirect took too long. Check your browser settings or try a different sign-in method.");
+            setLoading(null);
+          }
+        }, 5000);
       }
     } catch (err) {
       console.error('OAuth exception:', err);
