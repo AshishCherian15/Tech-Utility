@@ -106,17 +106,23 @@ export default function LoginPage({
     setLoading(provider);
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnPath)}`,
+          skipBrowserRedirect: false,
         },
       });
       if (error) {
-        setError("Could not start sign-in with this provider. Please try again.");
+        console.error('OAuth error:', error);
+        setError(`Could not start sign-in with ${provider}. ${error.message}`);
         setLoading(null);
+      } else {
+        console.log('OAuth started successfully, redirecting...');
+        // The browser will be redirected automatically
       }
-    } catch {
+    } catch (err) {
+      console.error('OAuth exception:', err);
       setError("Could not start sign-in. Check your connection and try again.");
       setLoading(null);
     }
