@@ -1,14 +1,14 @@
-# Ash-Tech — Project Progress & AI Agent Handoff Document
+# ByteShelf — Project Progress & AI Agent Handoff Document
 
-> **Last Updated:** October 5, 2026
-> **Repository:** [https://github.com/AshishCherian15/Ash-Tech](https://github.com/AshishCherian15/Ash-Tech)
+> **Last Updated:** October 9, 2026
+> **Repository:** [https://github.com/AshishCherian15/Tech-Utility](https://github.com/AshishCherian15/Tech-Utility)
 > **Status:** The main application flows are implemented, but the app is **not yet verified or ready for invited-user launch**. The schema is installed on the confirmed staging project; all five tables, RLS flags/policies, the private image bucket, and trusted owner metadata were verified. Local `BYTESHELF_ADMIN_EMAIL` is configured. Owner Google sign-in and basic entry create/read/soft-delete were smoke-tested; cross-account isolation and the broader authenticated workflows remain untested. Premium visual design system has been implemented with modern branding.
 
 ---
 
 ## 📌 Executive Project Summary
 
-**Ash-Tech** is a private, login-gated personal knowledge memory app built for **Ashish Cherian**. It stores technical discoveries (tips, tricks, hacks, apps, tools, commands, extensions, prompts) with instant search, AI-assisted drafting, custom categories, soft delete, and guest account management.
+**ByteShelf** is a private, login-gated personal knowledge memory app built for **Ashish Cherian**. It stores technical discoveries (tips, tricks, hacks, apps, tools, commands, extensions, prompts) with instant search, AI-assisted drafting, custom categories, soft delete, and guest account management.
 
 ---
 

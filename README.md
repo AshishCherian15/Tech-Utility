@@ -62,7 +62,7 @@ ByteShelf is a private, login-protected personal knowledge base for **tips, tric
 ## Project Structure
 
 ```
-Ash-Tech/
+Tech-Utility/
 ├── database/
 │   ├── schema.sql              # Full Supabase schema + RLS policies
 │   └── seed_sample_entries.sql # Seed script for CodeFronts & Windows Clipboard
@@ -192,8 +192,8 @@ to the browser.
 Clone the repository and run commands from its root directory:
 
 ```bash
-git clone https://github.com/AshishCherian15/Ash-Tech.git
-cd Ash-Tech
+git clone https://github.com/AshishCherian15/Tech-Utility.git
+cd Tech-Utility
 cp .env.example .env.local
 npm ci
 npm run dev
