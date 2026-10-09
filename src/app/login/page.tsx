@@ -191,15 +191,44 @@ export default function LoginPage({
         <div className="login-bg-grid" />
       </div>
 
-      <main className="login-container">
-        {/* Logo & brand */}
-        <div className="login-brand">
-          <div className="login-logo"><BrandMark size={56} /></div>
-          <div className="login-brand-text">
-            <h1 className="login-title">ByteShelf</h1>
-            <p className="login-tagline">Your shelf of useful tech</p>
+      <div className="login-split">
+        {/* Left Side: Brand and Info */}
+        <div className="login-info">
+          <div className="login-logo-container">
+            <BrandMark size={64} />
+          </div>
+          <h1 className="login-hero-title">ByteShelf</h1>
+          <p className="login-hero-subtitle">
+            Your private, searchable tech memory. Built for saving tips, tricks, tools, and commands you don't want to forget.
+          </p>
+
+          <div className="login-features-list">
+            <div className="login-feature-item">
+              <div className="login-feature-icon"><Search size={20} /></div>
+              <div className="login-feature-text">
+                <h3>Instant Search</h3>
+                <p>Find your saved tech knowledge in milliseconds.</p>
+              </div>
+            </div>
+            <div className="login-feature-item">
+              <div className="login-feature-icon"><Zap size={20} /></div>
+              <div className="login-feature-text">
+                <h3>AI-Assisted</h3>
+                <p>Auto-extract details and tags from URLs and content.</p>
+              </div>
+            </div>
+            <div className="login-feature-item">
+              <div className="login-feature-icon"><Shield size={20} /></div>
+              <div className="login-feature-text">
+                <h3>Private & Secure</h3>
+                <p>Login-gated access with Row Level Security.</p>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Right Side: Auth Card */}
+        <main className="login-container">
 
         {/* Card */}
         <div className="login-card">
@@ -351,35 +380,18 @@ export default function LoginPage({
             <span>Contributor Access</span>
           </div>
 
-          <div className="login-features">
-            <div className="login-feature">
-              <Search size={14} />
-              <span>Instant search across the knowledge base</span>
-            </div>
-            <div className="login-feature">
-              <Database size={14} />
-              <span>Contribute structured entries</span>
-            </div>
-            <div className="login-feature">
-              <Zap size={14} />
-              <span>AI-assisted entry drafting</span>
-            </div>
-            <div className="login-feature">
-              <Shield size={14} />
-              <span>Moderated & high-quality content</span>
-            </div>
-          </div>
+          <p className="login-footer" style={{ marginTop: 0 }}>
+            Sign up to contribute to ByteShelf
+          </p>
         </div>
 
-        <p className="login-footer">
-          Sign up to contribute to ByteShelf
-        </p>
-        <nav className="login-legal-links" aria-label="Legal information">
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/terms">Terms</Link>
-          <Link href="/cookies">Cookies</Link>
+        <nav className="login-legal-links" aria-label="Legal information" style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>
+          <Link href="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy</Link>
+          <Link href="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms</Link>
+          <Link href="/cookies" style={{ color: 'inherit', textDecoration: 'none' }}>Cookies</Link>
         </nav>
       </main>
+      </div>
 
       <style>{`
         .login-page {
@@ -438,30 +450,104 @@ export default function LoginPage({
           50% { transform: translateY(-30px) scale(1.05); }
         }
 
-        .login-container {
+        .login-split {
           position: relative;
           z-index: 1;
           width: 100%;
+          max-width: 960px;
+          display: grid;
+          grid-template-columns: 1fr 420px;
+          gap: 64px;
+          align-items: center;
+        }
+
+        @media (max-width: 860px) {
+          .login-split {
+            grid-template-columns: 1fr;
+            max-width: 420px;
+            gap: 32px;
+          }
+          .login-info {
+            align-items: center;
+            text-align: center;
+          }
+          .login-features-list {
+            display: none !important;
+          }
+          .login-hero-subtitle {
+            margin-bottom: 0 !important;
+          }
+        }
+
+        .login-info {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .login-logo-container {
+          margin-bottom: 8px;
+        }
+
+        .login-hero-title {
+          font-size: 48px;
+          font-weight: 800;
+          color: var(--text-primary);
+          letter-spacing: -1px;
+          line-height: 1.1;
+        }
+
+        .login-hero-subtitle {
+          font-size: 18px;
+          color: var(--text-secondary);
+          line-height: 1.5;
           max-width: 420px;
+          margin-bottom: 32px;
+        }
+
+        .login-features-list {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .login-feature-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+        }
+
+        .login-feature-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background: rgba(59, 130, 246, 0.1);
+          color: var(--brand-blue-bright);
+          display: grid;
+          place-items: center;
+          flex-shrink: 0;
+        }
+
+        .login-feature-text h3 {
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--text-primary);
+          margin-bottom: 4px;
+        }
+
+        .login-feature-text p {
+          font-size: 14px;
+          color: var(--text-muted);
+          line-height: 1.4;
+          margin: 0;
+        }
+
+        .login-container {
+          width: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 28px;
-        }
-
-        .login-brand {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          text-decoration: none;
-        }
-
-        .login-logo {
-          width: 56px;
-          height: 56px;
-          display: grid;
-          place-items: center;
-          flex: 0 0 56px;
+          gap: 20px;
         }
 
         .login-password-field {
@@ -635,29 +721,14 @@ export default function LoginPage({
           background: var(--border-subtle);
         }
 
-        .login-features {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
-
-        .login-feature {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 12px;
-          color: var(--text-muted);
-        }
-
-        .login-feature svg {
-          color: var(--brand-blue-bright);
-          flex-shrink: 0;
-        }
-
         .login-footer {
-          font-size: 12px;
+          font-size: 13px;
           color: var(--text-muted);
           text-align: center;
+        }
+        
+        .login-legal-links a:hover {
+          color: var(--text-primary) !important;
         }
       `}</style>
     </div>
