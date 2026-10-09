@@ -64,6 +64,9 @@ export const metadata: Metadata = {
     description:
       "A searchable library of useful tech tools, tips, websites, apps, commands, and learning resources.",
   },
+  verification: {
+    google: "google2500a0ac0fe3156d",
+  },
 };
 
 export const viewport: Viewport = {
