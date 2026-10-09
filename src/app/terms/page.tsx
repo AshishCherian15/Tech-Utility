@@ -30,7 +30,7 @@ export default function TermsPage() {
 
         <section>
           <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>4. Disclaimer of Warranties</h2>
-          <p>ByteShelf is provided "as is" without warranties of any kind, whether express or implied. We do not guarantee that the service will be uninterrupted or error-free. The snippets and commands on this platform are user-generated; use them at your own risk.</p>
+          <p>ByteShelf is provided &quot;as is&quot; without warranties of any kind, whether express or implied. We do not guarantee that the service will be uninterrupted or error-free. The snippets and commands on this platform are user-generated; use them at your own risk.</p>
         </section>
 
         <section>

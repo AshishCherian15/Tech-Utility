@@ -16,6 +16,9 @@ import BackLink from "@/components/BackLink";
 
 interface EntryDetailProps {
   entry: Entry;
+  publicView?: boolean;
+  backHref?: string;
+  backLabel?: string;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -25,7 +28,12 @@ const TYPE_COLORS: Record<string, string> = {
   Guide: "badge-blue", Prompt: "badge-pink",
 };
 
-export default function EntryDetail({ entry }: EntryDetailProps) {
+export default function EntryDetail({
+  entry,
+  publicView = false,
+  backHref = "/dashboard",
+  backLabel = "Back",
+}: EntryDetailProps) {
   const [copied, setCopied] = useState(false);
   const [copying, setCopying] = useState(false);
   const [favorited, setFavorited] = useState(entry.favorited);
@@ -124,7 +132,7 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
       {/* Header */}
       <div className="entry-detail-header">
         <div className="entry-detail-nav">
-          <BackLink href="/dashboard">Back</BackLink>
+          <BackLink href={backHref}>{backLabel}</BackLink>
           <div style={{ display: "flex", gap: 4 }}>
             {/* breadcrumb */}
             <span style={{ color: "var(--text-muted)", fontSize: 13 }}>Dashboard</span>
@@ -133,6 +141,7 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
           </div>
         </div>
 
+        {!publicView && (
         <div className="entry-detail-actions">
           <button
             id="btn-toggle-favorite"
@@ -169,6 +178,7 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
             {deleting ? "Moving…" : "Delete"}
           </button>
         </div>
+        )}
       </div>
 
       {/* Body */}
@@ -191,7 +201,7 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
               )}
               {pinned && <Pin size={14} style={{ color: "var(--brand-blue-bright)" }} />}
               {favorited && <Star size={14} style={{ color: "#fbbf24", fill: "#fbbf24" }} />}
-              {entry.status !== "PUBLISHED" && (
+              {!publicView && entry.status !== "PUBLISHED" && (
                 <span className="badge badge-orange" style={{ marginLeft: "auto" }}>
                   Status: {entry.status}
                 </span>
@@ -407,6 +417,15 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
           </div>
         </aside>
       </div>
+      {publicView && (
+        <div className="public-entry-cta">
+          <div>
+            <strong>Have something useful to add?</strong>
+            <span>Join ByteShelf and submit your own tech discoveries for review.</span>
+          </div>
+          <Link href="/login" className="btn btn-primary btn-sm">Sign up to contribute</Link>
+        </div>
+      )}
 
       <style>{`
         .entry-detail {
@@ -587,6 +606,30 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
           gap: 12px;
         }
 
+        .public-entry-cta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin: 0;
+          padding: 18px 32px;
+          border-top: 1px solid var(--border-subtle);
+          background: var(--bg-surface);
+        }
+
+        .public-entry-cta div {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          color: var(--text-secondary);
+          font-size: 13px;
+        }
+
+        .public-entry-cta strong {
+          color: var(--text-primary);
+          font-size: 14px;
+        }
+
         .entry-sidebar-card {
           background: var(--bg-card);
           border: 1px solid var(--border-card);
@@ -622,6 +665,11 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
           }
           .entry-detail-header {
             padding: 12px 16px;
+          }
+          .public-entry-cta {
+            align-items: stretch;
+            flex-direction: column;
+            padding: 16px;
           }
           .entry-detail-title {
             font-size: 20px;

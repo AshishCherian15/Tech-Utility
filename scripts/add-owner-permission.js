@@ -1,7 +1,14 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = 'https://cscrpfvvfnxoezzbegwz.supabase.co';
-const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzY3JwZnZ2Zm54b2V6emJlZ3d6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2NDQ5MywiZXhwIjoyMTA2NDQwNDkzfQ.jL0Ed41EeQrjFLgoyvi1VD7NGU9eh5Te74tGuYKLDCE';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ownerEmail = process.env.BYTESHELF_ADMIN_EMAIL;
+
+if (!supabaseUrl || !serviceRoleKey || !ownerEmail) {
+  throw new Error(
+    'Set NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and BYTESHELF_ADMIN_EMAIL before running this script.'
+  );
+}
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: {
@@ -11,8 +18,6 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 async function addOwnerPermission() {
-  const ownerEmail = 'ashishcherian15@gmail.com';
-
   console.log(`Adding can_create_entries permission to owner: ${ownerEmail}\n`);
 
   const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();

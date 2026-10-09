@@ -60,6 +60,9 @@ ALTER TABLE public.entries
     ADD COLUMN IF NOT EXISTS cover_image_url TEXT;
 
 CREATE INDEX IF NOT EXISTS entries_status_idx ON entries(status);
+CREATE INDEX IF NOT EXISTS entries_published_at_idx
+  ON entries(published_at DESC)
+  WHERE status = 'PUBLISHED';
 
 -- 4. Reports table
 CREATE TABLE IF NOT EXISTS public.reports (
@@ -70,6 +73,18 @@ CREATE TABLE IF NOT EXISTS public.reports (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     resolved_at TIMESTAMPTZ
 );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'reports_unique_reporter'
+      AND conrelid = 'public.reports'::regclass
+  ) THEN
+    ALTER TABLE public.reports
+      ADD CONSTRAINT reports_unique_reporter UNIQUE (entry_id, reported_by_id);
+  END IF;
+END $$;
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can create reports" ON public.reports FOR INSERT WITH CHECK (auth.uid() = reported_by_id);
 CREATE POLICY "Moderators can view reports" ON public.reports FOR SELECT USING (

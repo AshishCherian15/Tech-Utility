@@ -4,7 +4,7 @@ import { use, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { GitBranch, Zap, Shield, Search, Database, Eye, EyeOff } from "lucide-react";
+import { Zap, Shield, Search, Eye, EyeOff } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 
 function getSafeReturnPath(value: string | undefined): string {
@@ -59,22 +59,18 @@ export default function LoginPage({
     setLoading("email");
     setError(null);
     try {
-      console.log('Attempting email/password sign-in:', email.trim());
-
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
 
       if (signInError) {
-        console.error('Email auth error:', signInError);
         setError("Invalid email or password. Please try again.");
         return;
       }
 
       router.replace(returnPath);
-    } catch (err) {
-      console.error('Email auth exception:', err);
+    } catch {
       setError("Sign-in failed. Please try again.");
     } finally {
       setLoading(null);
@@ -102,7 +98,7 @@ export default function LoginPage({
       }
 
       setRecoveryNotice("Check your email for the confirmation link to complete sign up.");
-    } catch (err) {
+    } catch {
       setError("Sign-up failed. Please try again.");
     } finally {
       setLoading(null);
@@ -168,7 +164,7 @@ export default function LoginPage({
           </div>
           <h1 className="login-hero-title">ByteShelf</h1>
           <p className="login-hero-subtitle">
-            Your private, searchable tech memory. Built for saving tips, tricks, tools, and commands you don't want to forget.
+            Your searchable shared tech library. Built for saving tips, tricks, tools, and commands the community should not have to rediscover.
           </p>
 
           <div className="login-features-list">

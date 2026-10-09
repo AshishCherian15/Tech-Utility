@@ -27,6 +27,7 @@ const PROTECTED_PATHS = [
   "/trash",
   "/settings",
   "/users",
+  "/admin",
   "/review-queue",
 ];
 

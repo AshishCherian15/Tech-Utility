@@ -15,13 +15,6 @@ export async function GET(request: Request) {
   }
   const error_desc = searchParams.get("error_description");
 
-  console.log('OAuth callback:', {
-    hasCode: !!code,
-    error_desc,
-    requestedNext,
-    origin,
-  });
-
   if (error_desc) {
     console.error('OAuth error description:', error_desc);
     if (requestedNext === "/auth/reset-password") {
@@ -32,9 +25,8 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      console.log('Session exchanged successfully, redirecting to:', nextUrl.href);
       return NextResponse.redirect(nextUrl);
     } else {
       console.error('Session exchange failed:', error);
@@ -45,7 +37,6 @@ export async function GET(request: Request) {
     }
   }
 
-  console.log('No code in callback, redirecting to dashboard');
   if (requestedNext === "/auth/reset-password") {
     return NextResponse.redirect(`${origin}/login?error=recovery`);
   }

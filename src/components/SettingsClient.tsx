@@ -1171,7 +1171,7 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
       setTimeout(() => {
         window.location.reload();
       }, 500);
-    } catch (err) {
+    } catch {
       toastError("Failed to clear cache");
     }
   };

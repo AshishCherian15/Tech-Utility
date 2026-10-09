@@ -90,13 +90,11 @@ export default function Sidebar({ user, isOwner, userRole }: SidebarProps) {
     <aside className="sidebar">
       {/* Logo */}
       <div className="sidebar-logo" style={{ padding: "20px 16px 16px" }}>
-        <img
-          src="/byteshelf-logo-horizontal.png"
-          alt="ByteShelf"
-          width={150}
-          height="auto"
-          style={{ display: "block" }}
-        />
+        <BrandMark size={34} />
+        <div>
+          <div className="sidebar-logo-name">ByteShelf</div>
+          <div className="sidebar-logo-sub">Useful tech library</div>
+        </div>
       </div>
 
       {/* Add button */}

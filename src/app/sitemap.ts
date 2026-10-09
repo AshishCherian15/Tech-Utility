@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { publicPageLinks, legalPageLinks } from "@/lib/public-page-content";
 
 const deploymentUrl =
   process.env.NEXT_PUBLIC_APP_URL ??
@@ -15,18 +16,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1,
     },
-    {
-      url: `${base}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${base}/terms`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
+    ...[...publicPageLinks, ...legalPageLinks, { href: "/refund-policy", label: "Refund Policy" }]
+      .map((link) => ({
+        url: `${base}${link.href}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.5,
+      })),
   ];
 
   // Initialize Supabase client
@@ -44,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (entries) {
       entries.forEach((entry) => {
         sitemapEntries.push({
-          url: `${base}/entries/${entry.id}`,
+          url: `${base}/entry/${entry.id}`,
           lastModified: new Date(entry.updated_at),
           changeFrequency: "weekly",
           priority: 0.8,

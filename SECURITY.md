@@ -1,10 +1,10 @@
 # Security Policy
 
-**Last reviewed:** 2026-10-05
+**Last reviewed:** 2026-10-10
 
 ## Overview
 
-Ash-Tech is a **private personal tool** — it is not a public multi-tenant SaaS. Access is restricted to the owner and accounts the owner provisions.
+ByteShelf is now structured as a **public, reviewed technology library** with authenticated contributor, moderator, owner, and admin workflows. Public pages expose only published content. Drafts, pending entries, account settings, trash, user management, and admin tools remain protected by server-side checks and Supabase Row Level Security.
 
 ## Supported Versions
 
@@ -18,24 +18,24 @@ This project is currently pre-release. Only the `main` branch is maintained.
 ## Security Model
 
 ### Authentication & Authorization
-- Login via **Google / GitHub OAuth or provisioned email/password accounts** — public sign-up is disabled
-- Email/password users can request password-recovery links; configure the Supabase email provider and callback redirect allow-list before relying on this flow
-- Provisioned password accounts are currently marked email-confirmed by the owner-only admin route; no independent verification email is sent
-- Session inactivity/maximum lifetime is controlled by Supabase Auth settings and must be configured and verified there
-- App-level login, recovery, and AI rate limiting is not configured; set Supabase Auth limits and provider billing alerts, and add distributed limits before broader access
-- Supabase Auth supports TOTP, but the application does not currently complete or enforce an MFA challenge during sign-in
-- Every data API route re-validates the Supabase session **server-side** before touching data
-- User IDs are **never trusted from the client** — always read from the verified server session
-- Owner/permanent/temporary role, enablement, account type, and expiration are stored in trusted `app_metadata`; temporary accounts require a valid expiry, enforced by both Next.js Proxy and database RLS
-- Account creation, enable/disable, and bounded renewal of expired temporary accounts are restricted to the configured owner email and use the server-only Supabase service role key; the management UI is hidden from invited users
-- Signed-in users can permanently delete their own account; the server removes files in their private Storage folder before deleting the Auth user, which cascades the application's database rows
+- Public visitors can browse published entries and public information pages without a session.
+- Contributors authenticate through Supabase Auth and can draft or submit entries.
+- Moderator/admin routes (`/admin`, `/review-queue`, `/users`) are protected by server-side role checks.
+- Email/password users can request password-recovery links; configure the Supabase email provider and callback redirect allow-list before relying on this flow.
+- Session inactivity/maximum lifetime is controlled by Supabase Auth settings and must be configured and verified there.
+- App-level distributed rate limiting is not yet configured; set Supabase Auth limits and add shared-store limits before broad public launch.
+- Supabase Auth supports TOTP, but the application does not currently complete or enforce an MFA challenge during sign-in.
+- Every data API route re-validates the Supabase session **server-side** before touching private data.
+- User IDs are **never trusted from the client** — always read from the verified server session.
+- Owner account management uses trusted server-side credentials and must never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
+- Signed-in users can permanently delete their own account; the server removes files in their private Storage folder before deleting the Auth user, which cascades the application's database rows.
 
 ### Row Level Security (RLS)
-- The schema enables RLS on all five application tables
-- Policies require the row `user_id` to match `auth.uid()` and the account to have an explicitly provisioned, enabled role; entry category references and child-row entry references must belong to the same user
-- During setup, the existing owner Auth user must be assigned the trusted `owner` role in `app_metadata` using the documented Supabase SQL setup step; `BYTESHELF_ADMIN_EMAIL` only authorizes the application proxy and does not bypass database RLS
-- The configured Supabase project previously returned `PGRST205` for `public.entries`; source policies are not evidence that the schema has been applied or verified in the target project
-- There are no unauthenticated read paths, not even for the dashboard
+- Apply `database/schema.sql`, `database/01-byteshelf-pivot.sql`, and `database/02-byteshelf-rls-update.sql` in order.
+- The base schema enables RLS on the core application tables and private image bucket.
+- The pivot migrations add `public.users`, moderation fields, reports, moderation actions, public published reads, author-owned draft management, and moderator/admin review access.
+- Public unauthenticated reads must be limited to `PUBLISHED` entries and related public data.
+- Source policies are not evidence that the schema has been applied or verified in the target Supabase project; verify policies in the deployed database.
 
 ### AI Autofill Safety
 - Server-configured AI keys never enter the client bundle. User-provided Groq/Gemini keys are stored in browser local storage and sent to the authenticated autofill endpoint when used; avoid saving them on shared or untrusted devices.
@@ -47,6 +47,8 @@ This project is currently pre-release. Only the `main` branch is maintained.
 - `SUPABASE_SERVICE_ROLE_KEY`, `BYTESHELF_ADMIN_EMAIL`, and optional server-side AI keys belong only in deployment secrets and a git-ignored `.env.local`
 - The only key in the client bundle is `NEXT_PUBLIC_SUPABASE_ANON_KEY`, which is constrained entirely by RLS
 - Optional user-supplied AI keys are stored in browser local storage and are readable by same-origin JavaScript; use server-managed keys or avoid saving keys on shared devices
+- Helper scripts must read project URL, owner email, and service role credentials from environment variables. Do not hardcode production secrets in scripts.
+- If a real key was committed at any point in Git history, rotate it immediately. Treat it as compromised even if the current working tree no longer contains it.
 
 ### File Storage
 - The schema configures the `entry-images` Supabase Storage bucket as **private**
@@ -62,6 +64,19 @@ All responses include:
 - Content Security Policy restricting scripts, connections, images, and framing
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 - `Strict-Transport-Security` in production only
+
+### Public Compliance Pages
+- Privacy, Terms, Cookies, Consent, Legal Notices, Data Retention, Accessibility, License Compliance, Status, and Bug Bounty pages exist as public routes.
+- The cookie notice currently covers essential authentication cookies and browser storage only. Optional analytics/advertising cookies are not enabled.
+
+## Known Gaps Before Production
+
+- Distributed rate limiting is not yet implemented.
+- MFA challenge enforcement is not complete.
+- CAPTCHA/bot protection is not connected.
+- Monitoring/error dashboards are not connected.
+- Automated backups and disaster-recovery drills need setup.
+- Contact/newsletter forms are informational until a backend provider is connected.
 
 ## Reporting a Vulnerability
 
@@ -91,6 +106,7 @@ Before broader launch, assign an incident owner and private contact channel, ide
 
 ## What Is Out of Scope
 
-- Public-facing unauthenticated endpoints — there are none in V1
-- Multi-tenant data isolation — there is only one owner in V1
-- DDoS resilience and application-level rate limiting — no rate limiter is configured; hosting-plan protections have not been verified
+- DDoS resilience beyond hosting-provider protections
+- Paid bug bounty rewards
+- Live uptime guarantees
+- Application-level distributed rate limiting until a shared-store limiter is added

@@ -94,13 +94,8 @@ export default function MobileNav({ user, isOwner, userRole }: MobileNavProps) {
     <>
       <header className="mobile-header">
         <div className="mobile-logo">
-          <img
-            src="/byteshelf-logo-horizontal.png"
-            alt="ByteShelf"
-            width={120}
-            height="auto"
-            style={{ display: "block" }}
-          />
+          <BrandMark size={28} />
+          <span className="mobile-logo-text">ByteShelf</span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <Link href="/entries/new" className="btn btn-primary btn-sm">

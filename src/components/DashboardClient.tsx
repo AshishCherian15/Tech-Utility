@@ -17,6 +17,7 @@ interface DashboardClientProps {
   initialEntries: Entry[];
   totalEntries?: number;
   categories: Category[];
+  scope?: "library" | "mine";
   pageTitle?: string;
   emptyMessage?: string;
   initialCategoryId?: string;
@@ -71,6 +72,7 @@ export default function DashboardClient({
   initialEntries,
   totalEntries: initialTotalEntries,
   categories,
+  scope = "library",
   pageTitle,
   emptyMessage,
   initialCategoryId = "",
@@ -141,7 +143,7 @@ export default function DashboardClient({
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const response = await fetch(`/api/entries?limit=100&offset=${nextOffset}`);
+      const response = await fetch(`/api/entries?scope=${scope}&limit=100&offset=${nextOffset}`);
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not load more entries");
       const loadedIds = new Set(entries.map((entry) => entry.id));

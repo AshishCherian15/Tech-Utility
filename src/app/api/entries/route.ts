@@ -4,6 +4,7 @@ import { createEntrySchema, readEntryJson } from "@/lib/validation/entry";
 import { z } from "zod";
 
 const entryListQuerySchema = z.object({
+  scope: z.enum(["library", "mine"]).optional().default("library"),
   q: z.string().max(200).optional(),
   category_id: z.string().uuid().optional(),
   type: z.enum(["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"]).optional(),
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const rawFilters = Object.fromEntries(
-    ["q", "category_id", "type", "difficulty", "platform", "favorited"]
+    ["scope", "q", "category_id", "type", "difficulty", "platform", "favorited"]
       .flatMap((key) => {
         const value = searchParams.get(key);
         return value === null ? [] : [[key, value]];
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
   if (!parsedFilters.success) {
     return NextResponse.json({ error: "Invalid entry filters" }, { status: 400 });
   }
-  const { q, category_id, type, difficulty, platform, favorited } = parsedFilters.data;
+  const { scope, q, category_id, type, difficulty, platform, favorited } = parsedFilters.data;
   const limit = Number(searchParams.get("limit") ?? 100);
   const offset = Number(searchParams.get("offset") ?? 0);
   if (
@@ -42,10 +43,21 @@ export async function GET(request: Request) {
   let query = supabase
     .from("entries")
     .select("*, category:categories(*), links:entry_links(*)", { count: "exact" })
-    .eq("user_id", user.id)
     .is("deleted_at", null)
-    .order("pinned", { ascending: false })
-    .order("created_at", { ascending: false })
+    .order("pinned", { ascending: false });
+
+  if (scope === "mine") {
+    query = query
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+  } else {
+    query = query
+      .or(`status.eq.PUBLISHED,user_id.eq.${user.id}`)
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
+  }
+
+  query = query
     .order("id", { ascending: true })
     .range(offset, offset + limit - 1);
 
@@ -95,9 +107,8 @@ export async function POST(request: Request) {
   const entry = parsed.data;
 
   if (entry.category_id) {
-    // Categories are now public, so we don't strictly require user_id match unless enforcing they only use their own?
-    // Wait, categories are public but creating entries might allow using any category now. 
-    // Let's just check if the category exists.
+    // Categories are shared in the public-library model, so an authenticated
+    // contributor may attach an entry to any existing category.
     const { data: category, error: categoryError } = await supabase
       .from("categories")
       .select("id")

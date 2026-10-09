@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
-import { ArrowRight, Search, Zap, Shield, Sparkles, FolderOpen, Tag, Code2, Globe } from "lucide-react";
+import { ArrowRight, Search, Zap, Sparkles, FolderOpen, Tag, Code2, Globe } from "lucide-react";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -40,7 +40,7 @@ export default async function Home() {
           <div className="hero-content">
             <div className="hero-badge">
               <Sparkles size={14} className="badge-icon" />
-              <span>Your Personal Knowledge Base</span>
+              <span>Community-Built Tech Library</span>
             </div>
             
             <h1 className="hero-title">
@@ -53,7 +53,7 @@ export default async function Home() {
             
             <div className="hero-cta">
               <Link href="/login" className="btn btn-primary hero-btn-main">
-                Start Building Your Shelf <ArrowRight size={20} />
+                Start Contributing <ArrowRight size={20} />
               </Link>
               <Link href="#features" className="btn btn-secondary hero-btn-alt">
                 Explore Features
@@ -66,8 +66,8 @@ export default async function Home() {
                 <span className="stat-label">Lightning Fast</span>
               </div>
               <div className="stat-item">
-                <span className="stat-value">🔒</span>
-                <span className="stat-label">Fully Private</span>
+                <span className="stat-value">🌍</span>
+                <span className="stat-label">Open Library</span>
               </div>
               <div className="stat-item">
                 <span className="stat-value">🤖</span>
@@ -81,7 +81,7 @@ export default async function Home() {
         <section id="features" className="features-section">
           <div className="features-header">
             <h2>Everything you need to stay organized</h2>
-            <p>ByteShelf is built for developers, designers, and tech enthusiasts who want to stop losing their favorite tools in endless browser bookmarks.</p>
+            <p>ByteShelf is built for developers, designers, students, and tech enthusiasts who want useful tools explained clearly in one shared library.</p>
           </div>
           
           <div className="features-grid">
@@ -127,7 +127,7 @@ export default async function Home() {
         <section className="cta-section">
           <div className="cta-box">
             <h2>Ready to declutter your tech life?</h2>
-            <p>Join ByteShelf and build a private, permanent home for your digital tools.</p>
+            <p>Join ByteShelf and help build a useful, reviewed library of digital tools and technical know-how.</p>
             <Link href="/login" className="btn btn-primary cta-btn">
               Create Your Free Account
             </Link>
@@ -142,9 +142,14 @@ export default async function Home() {
             <span>ByteShelf</span>
           </div>
           <div className="footer-links">
+            <Link href="/about">About</Link>
+            <Link href="/contact">Contact</Link>
+            <Link href="/faq">FAQ</Link>
+            <Link href="/accessibility">Accessibility</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/cookies">Cookies</Link>
+            <Link href="/status">Status</Link>
           </div>
           <div className="footer-copyright">
             &copy; {new Date().getFullYear()} ByteShelf. All rights reserved.

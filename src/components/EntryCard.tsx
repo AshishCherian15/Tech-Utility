@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Star, Pin, Copy, Check, Terminal, ExternalLink } from "lucide-react";
+import { Star, Pin, Copy, Check, Terminal } from "lucide-react";
 import { useState } from "react";
 import type { Entry } from "@/lib/types";
 import { formatRelativeDate, truncate } from "@/lib/utils";
-import { useImageUrls } from "@/lib/use-image-urls";
 
 interface EntryCardProps {
   entry: Entry;
   typeColorClass: string;
+  hrefPrefix?: "/entries" | "/entry";
 }
 
 const CARD_COLORS: Record<string, string> = {
@@ -23,9 +23,8 @@ const CARD_COLORS: Record<string, string> = {
   "#red": "rgba(239,68,68,0.08)",
 };
 
-export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
+export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entries" }: EntryCardProps) {
   const [copied, setCopied] = useState(false);
-  const imageUrls = useImageUrls(entry.images ?? []);
 
   const cardBg = entry.color ? CARD_COLORS[entry.color] ?? "var(--bg-card)" : "var(--bg-card)";
 
@@ -40,7 +39,7 @@ export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
   };
 
   return (
-    <Link href={`/entries/${entry.id}`} className="entry-card" style={{ background: cardBg }}>
+    <Link href={`${hrefPrefix}/${entry.id}`} className="entry-card" style={{ background: cardBg }}>
       {/* Xiaomi Notes style top image preview */}
       {entry.cover_image_url && (
         <div style={{ margin: "-16px -16px 12px -16px", height: 130, overflow: "hidden", borderBottom: "1px solid var(--border-card)", position: "relative" }}>
