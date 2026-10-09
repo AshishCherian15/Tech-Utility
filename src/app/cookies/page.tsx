@@ -3,7 +3,7 @@ import BackLink from "@/components/BackLink";
 
 export const metadata: Metadata = {
   title: "Cookies",
-  description: "Cookie and browser storage information for Tech-Utility.",
+  description: "Cookie and browser storage information for ByteShelf.",
 };
 
 export default function CookiesPage() {

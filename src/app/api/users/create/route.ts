@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
+  const ownerEmail = process.env.BYTESHELF_ADMIN_EMAIL?.trim().toLowerCase();
   if (!ownerEmail || user.email?.toLowerCase() !== ownerEmail) {
     return NextResponse.json({ error: "Only the configured owner can create accounts" }, { status: 403 });
   }

@@ -9,19 +9,20 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Entry } from "@/lib/types";
 
 interface ShellLayoutProps {
-  user: User;
+  user: User | null;
   entries: Partial<Entry>[];
   children: React.ReactNode;
   isOwner: boolean;
+  userRole: string;
 }
 
-export default function ShellLayout({ user, entries, children, isOwner }: ShellLayoutProps) {
+export default function ShellLayout({ user, entries, children, isOwner, userRole }: ShellLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div className="app-shell" style={{ position: "relative" }}>
       <div className={sidebarOpen ? "" : "sidebar-collapsed"}>
-        <Sidebar user={user} isOwner={isOwner} />
+        <Sidebar user={user} isOwner={isOwner} userRole={userRole} />
       </div>
 
       <div className="main-content" style={{ position: "relative" }}>
@@ -48,7 +49,7 @@ export default function ShellLayout({ user, entries, children, isOwner }: ShellL
           {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
         </button>
 
-        <MobileNav user={user} isOwner={isOwner} />
+        <MobileNav user={user} isOwner={isOwner} userRole={userRole} />
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <main id="main-content" tabIndex={-1} style={{ flex: 1, minWidth: 0, paddingTop: 10 }}>
           {children}

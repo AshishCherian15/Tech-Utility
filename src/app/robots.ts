@@ -6,10 +6,13 @@ const deploymentUrl =
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: {
-      userAgent: "*",
-      disallow: "/",
-    },
+    rules: [
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/admin", "/api/", "/review-queue", "/dashboard", "/entries/new", "/settings", "/users", "/trash", "/favorites"],
+      },
+    ],
     sitemap: new URL("/sitemap.xml", deploymentUrl).toString(),
   };
 }

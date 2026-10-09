@@ -3,18 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
-import { Menu, X, Plus, LayoutDashboard, FolderOpen, Trash2, Settings, Users } from "lucide-react";
+import { Menu, X, Plus, LayoutDashboard, FolderOpen, Trash2, Settings, Users, ClipboardCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import BrandMark from "@/components/BrandMark";
 
 interface MobileNavProps {
-  user: User;
+  user: User | null;
   isOwner: boolean;
+  userRole: string;
 }
 
-export default function MobileNav({ user, isOwner }: MobileNavProps) {
+export default function MobileNav({ user, isOwner, userRole }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
@@ -77,21 +78,29 @@ export default function MobileNav({ user, isOwner }: MobileNavProps) {
     }
   };
 
-  const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User";
+  const name = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "User";
+  const canModerate = isOwner || userRole === "MODERATOR" || userRole === "ADMIN";
+
   const navItems = [
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/categories", icon: FolderOpen, label: "Categories" },
-    { href: "/trash", icon: Trash2, label: "Trash" },
+    ...(user ? [{ href: "/trash", icon: Trash2, label: "Trash" }] : []),
+    ...(canModerate ? [{ href: "/review-queue", icon: ClipboardCheck, label: "Review Queue" }] : []),
     ...(isOwner ? [{ href: "/users", icon: Users, label: "User accounts" }] : []),
-    { href: "/settings", icon: Settings, label: "Settings" },
+    ...(user ? [{ href: "/settings", icon: Settings, label: "Settings" }] : []),
   ];
 
   return (
     <>
       <header className="mobile-header">
         <div className="mobile-logo">
-          <BrandMark size={32} />
-          <span className="mobile-logo-text">Tech-Utility</span>
+          <img
+            src="/byteshelf-logo-horizontal.png"
+            alt="ByteShelf"
+            width={120}
+            height="auto"
+            style={{ display: "block" }}
+          />
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <Link href="/entries/new" className="btn btn-primary btn-sm">
@@ -146,11 +155,19 @@ export default function MobileNav({ user, isOwner }: MobileNavProps) {
               ))}
             </div>
             <div className="mobile-drawer-user">
-              <div className="sidebar-user-name">{name}</div>
-              <div className="sidebar-user-email">{user.email}</div>
-              <button type="button" onClick={handleSignOut} disabled={signingOut} aria-busy={signingOut} className="btn btn-danger" style={{ marginTop: 12 }}>
-                {signingOut ? "Signing out…" : "Sign out"}
-              </button>
+              {user ? (
+                <>
+                  <div className="sidebar-user-name">{name}</div>
+                  <div className="sidebar-user-email">{user.email}</div>
+                  <button type="button" onClick={handleSignOut} disabled={signingOut} aria-busy={signingOut} className="btn btn-danger" style={{ marginTop: 12 }}>
+                    {signingOut ? "Signing out…" : "Sign out"}
+                  </button>
+                </>
+              ) : (
+                <Link href="/login" className="btn btn-secondary" onClick={() => setOpen(false)} style={{ width: "100%", justifyContent: "center" }}>
+                  Sign In
+                </Link>
+              )}
             </div>
           </nav>
         </div>

@@ -4,7 +4,7 @@ import DashboardClient from "@/components/DashboardClient";
 
 export const metadata: Metadata = {
   title: "Dashboard",
-  description: "Your Tech-Utility knowledge base — search, browse, and manage your saved tech discoveries.",
+  description: "Your ByteShelf knowledge base — search, browse, and manage your saved tech discoveries.",
 };
 
 interface DashboardPageProps {

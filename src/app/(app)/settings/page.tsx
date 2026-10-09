@@ -5,7 +5,7 @@ import SettingsClient from "@/components/SettingsClient";
 
 export const metadata: Metadata = {
   title: "Settings",
-  description: "Manage your Tech-Utility account, appearance, and data.",
+  description: "Manage your ByteShelf account, appearance, and data.",
 };
 
 export default async function SettingsPage() {
@@ -19,7 +19,7 @@ export default async function SettingsPage() {
     .is("deleted_at", null);
   if (error) throw error;
 
-  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
+  const ownerEmail = process.env.BYTESHELF_ADMIN_EMAIL?.trim().toLowerCase();
   const isOwner = Boolean(ownerEmail && user.email?.toLowerCase() === ownerEmail);
 
   return <SettingsClient user={user} entryCount={entryCount ?? 0} isOwner={isOwner} />;

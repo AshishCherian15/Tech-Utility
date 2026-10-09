@@ -140,7 +140,7 @@ function fetchHtml(url: URL, addresses: ResolvedAddress[]): Promise<{
     const req = transport(url, {
       method: "GET",
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; Tech-Utility-Link-Preview/1.0)",
+        "User-Agent": "Mozilla/5.0 (compatible; ByteShelf-Link-Preview/1.0)",
         Accept: "text/html,application/xhtml+xml",
       },
       lookup: pinnedLookup,

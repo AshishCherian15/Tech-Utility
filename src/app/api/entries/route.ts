@@ -75,13 +75,8 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
-  const isOwner = Boolean(user.email && ownerEmail && user.email.toLowerCase() === ownerEmail);
-  const canCreateEntries = user.app_metadata?.can_create_entries === true || isOwner;
-
-  if (!canCreateEntries) {
-    return NextResponse.json({ error: "You do not have permission to create entries" }, { status: 403 });
-  }
+  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).single();
+  const role = dbUser?.role || "CONTRIBUTOR";
 
   let body: unknown;
   try {
@@ -100,11 +95,13 @@ export async function POST(request: Request) {
   const entry = parsed.data;
 
   if (entry.category_id) {
+    // Categories are now public, so we don't strictly require user_id match unless enforcing they only use their own?
+    // Wait, categories are public but creating entries might allow using any category now. 
+    // Let's just check if the category exists.
     const { data: category, error: categoryError } = await supabase
       .from("categories")
       .select("id")
       .eq("id", entry.category_id)
-      .eq("user_id", user.id)
       .maybeSingle();
     if (categoryError) {
       console.error("Entry category validation failed:", categoryError.message);
@@ -115,11 +112,19 @@ export async function POST(request: Request) {
     }
   }
 
+  // Enforce status based on role
+  let finalStatus = entry.status;
+  if (finalStatus === "PUBLISHED" && !["TRUSTED_CONTRIBUTOR", "MODERATOR", "ADMIN"].includes(role)) {
+    // Contributors must go through review
+    finalStatus = "PENDING";
+  }
+
   const { data, error } = await supabase
     .from("entries")
     .insert({
       user_id: user.id,
       ...entry,
+      status: finalStatus,
       pinned: false,
       favorited: false,
     })

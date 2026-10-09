@@ -62,7 +62,7 @@ export function AIConfigProvider({ children }: { children: React.ReactNode }) {
     }
     let preferences: Record<string, unknown> = {};
     try {
-      const stored = localStorage.getItem("tech-utility-ai-preferences");
+      const stored = localStorage.getItem("byteshelf-ai-preferences");
       if (stored) {
         const parsed: unknown = JSON.parse(stored);
         preferences = typeof parsed === "object" && parsed !== null
@@ -89,7 +89,7 @@ export function AIConfigProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     try {
-      localStorage.setItem("tech-utility-ai-preferences", JSON.stringify({
+      localStorage.setItem("byteshelf-ai-preferences", JSON.stringify({
         provider: config.provider,
         model: config.model,
         endpoint: config.endpoint,

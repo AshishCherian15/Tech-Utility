@@ -191,8 +191,18 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
               )}
               {pinned && <Pin size={14} style={{ color: "var(--brand-blue-bright)" }} />}
               {favorited && <Star size={14} style={{ color: "#fbbf24", fill: "#fbbf24" }} />}
+              {entry.status !== "PUBLISHED" && (
+                <span className="badge badge-orange" style={{ marginLeft: "auto" }}>
+                  Status: {entry.status}
+                </span>
+              )}
             </div>
             <h1 className="entry-detail-title">{entry.title}</h1>
+            {entry.hero_tag && (
+              <p style={{ fontSize: 18, fontWeight: 500, color: "var(--text-secondary)", margin: 0, marginTop: -4 }}>
+                {entry.hero_tag}
+              </p>
+            )}
             <div className="entry-detail-meta">
               <span>{entry.category?.icon} {entry.category?.name ?? "Uncategorized"}</span>
               <span>·</span>
@@ -206,6 +216,14 @@ export default function EntryDetail({ entry }: EntryDetailProps) {
               )}
             </div>
           </div>
+
+          {/* Cover Image */}
+          {entry.cover_image_url && (
+            <div className="entry-cover-image" style={{ width: "100%", borderRadius: 12, overflow: "hidden", border: "1px solid var(--border-subtle)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={entry.cover_image_url} alt="Cover" style={{ width: "100%", height: "auto", display: "block", maxHeight: 400, objectFit: "cover" }} />
+            </div>
+          )}
 
           {/* Tags */}
           {entry.tags && entry.tags.length > 0 && (

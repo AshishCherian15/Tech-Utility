@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import EntryForm from "@/components/EntryForm";
 
@@ -9,6 +9,11 @@ interface Props {
 export default async function EditEntryPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
 
   const [{ data: entry }, { data: categories }] = await Promise.all([
     supabase

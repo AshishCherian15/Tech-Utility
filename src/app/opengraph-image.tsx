@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Tech-Utility — Your Private Tech Library";
+export const alt = "ByteShelf — Your shelf of useful tech";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -69,7 +69,7 @@ export default function OpenGraphImage() {
               textShadow: "0 2px 8px rgba(0,0,0,0.2)",
             }}
           >
-            T
+            B
           </div>
           <div
             style={{
@@ -97,7 +97,7 @@ export default function OpenGraphImage() {
             marginBottom: "24px",
           }}
         >
-          TECH-UTILITY
+          BYTESHELF
         </div>
         
         {/* Tagline */}
@@ -113,8 +113,8 @@ export default function OpenGraphImage() {
             color: "#e0e7ff",
           }}
         >
-          <span>Your private</span>
-          <span>tech library</span>
+          <span>Your shelf of</span>
+          <span>useful tech</span>
         </div>
         
         {/* Subtitle */}

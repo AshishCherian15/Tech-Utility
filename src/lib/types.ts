@@ -21,6 +21,24 @@ export type Platform =
   | "Web"
   | "Cross-platform";
 
+// ByteShelf user roles (stored in app_metadata.role)
+export type UserRole =
+  | "visitor"          // unauthenticated — not stored as a row
+  | "contributor"      // registered, can submit entries (go to review queue)
+  | "trusted_contributor" // earned tier — submissions auto-publish
+  | "moderator"        // can approve/reject/unpublish entries
+  | "admin";           // full access including role management
+
+// Entry lifecycle status
+export type EntryStatus =
+  | "DRAFT"      // being written, not submitted
+  | "PENDING"    // submitted, awaiting moderator review
+  | "PUBLISHED"  // live, publicly visible and indexable
+  | "REJECTED"   // reviewed and declined (visible only to author + reason)
+  | "FLAGGED";   // was published, reported by users, pulled pending re-review
+
+export type PricingTier = "free" | "freemium" | "paid";
+
 export interface Category {
   id: string;
   user_id: string;
@@ -28,6 +46,7 @@ export interface Category {
   description: string | null;
   icon: string;
   color: string;
+  slug: string | null;
   created_at: string;
   updated_at: string;
   entry_count?: number;
@@ -55,6 +74,7 @@ export interface Entry {
   id: string;
   user_id: string;
   title: string;
+  slug: string | null;
   category_id: string | null;
   category?: Category;
   type: EntryType;
@@ -73,6 +93,18 @@ export interface Entry {
   color: string | null;
   pinned: boolean;
   favorited: boolean;
+  // ByteShelf public fields
+  status: EntryStatus;
+  author_id: string | null;
+  reviewed_by_id: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  published_at: string | null;
+  pricing: PricingTier | null;
+  pricing_note: string | null;
+  hero_tag: string | null;
+  cover_image_url: string | null;
+  // Soft delete (kept for trash bin)
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -95,6 +127,7 @@ export interface SearchFilters {
   platform?: Platform;
   favorited?: boolean;
   pinned?: boolean;
+  status?: EntryStatus;
 }
 
 export interface DraftEntry {
@@ -111,6 +144,28 @@ export interface DraftEntry {
   difficulty?: DifficultyLevel;
   platform?: Platform;
   command_snippet?: string;
+  pricing?: PricingTier;
+  pricing_note?: string;
+  hero_tag?: string;
   links?: Array<{ platform: string; url: string; label?: string }>;
   ai_drafted?: boolean;
+}
+
+// Moderation
+export interface Report {
+  id: string;
+  entry_id: string;
+  reported_by_id: string;
+  reason: string;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface ModerationAction {
+  id: string;
+  moderator_id: string;
+  entry_id: string | null;
+  action: "approved" | "rejected" | "unpublished" | "flagged" | "account_disabled" | "account_enabled";
+  reason: string | null;
+  created_at: string;
 }

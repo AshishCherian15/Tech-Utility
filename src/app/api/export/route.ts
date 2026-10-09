@@ -75,7 +75,7 @@ export async function GET() {
     status: 200,
     headers: {
       "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="tech-utility-export-${new Date().toISOString().split("T")[0]}.json"`,
+      "Content-Disposition": `attachment; filename="byteshelf-export-${new Date().toISOString().split("T")[0]}.json"`,
     },
   });
 }

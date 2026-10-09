@@ -17,6 +17,9 @@ const entryFields = {
   command_snippet: z.string().max(10000).nullable(),
   images: z.array(z.string().max(2048)).max(20),
   color: z.string().max(32).nullable(),
+  status: z.enum(["DRAFT", "PENDING", "PUBLISHED", "REJECTED", "FLAGGED"]).nullable(),
+  hero_tag: z.string().max(100).nullable(),
+  cover_image_url: z.string().url().max(2048).nullable(),
 };
 
 export const createEntrySchema = z.object({
@@ -36,6 +39,9 @@ export const createEntrySchema = z.object({
   command_snippet: entryFields.command_snippet.optional().default(null),
   images: entryFields.images.optional().default([]),
   color: entryFields.color.optional().default(null),
+  status: entryFields.status.optional().default("DRAFT"),
+  hero_tag: entryFields.hero_tag.optional().default(null),
+  cover_image_url: entryFields.cover_image_url.optional().default(null),
 }).strict();
 
 export const updateEntrySchema = z.object({

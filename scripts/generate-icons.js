@@ -2,7 +2,7 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-const svgPath = path.join(__dirname, '../public/tech-utility-icon.svg');
+const svgPath = path.join(__dirname, '../public/byteshelf-icon.svg');
 const svgContent = fs.readFileSync(svgPath, 'utf8');
 
 async function generateIcons() {

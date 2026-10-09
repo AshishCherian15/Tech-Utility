@@ -41,6 +41,20 @@ export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
 
   return (
     <Link href={`/entries/${entry.id}`} className="entry-card" style={{ background: cardBg }}>
+      {/* Xiaomi Notes style top image preview */}
+      {entry.cover_image_url && (
+        <div style={{ margin: "-16px -16px 12px -16px", height: 130, overflow: "hidden", borderBottom: "1px solid var(--border-card)", position: "relative" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={entry.cover_image_url}
+            alt={entry.title}
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s ease" }}
+          />
+        </div>
+      )}
+
       <div className="entry-card-header">
         <div className="entry-card-meta">
           <span className={`badge ${typeColorClass}`}>{entry.type}</span>
@@ -55,8 +69,14 @@ export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
       </div>
 
       <h2 className="entry-card-title">{truncate(entry.title, 60)}</h2>
+      
+      {entry.hero_tag && (
+        <p className="entry-card-hero-tag" style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
+          {truncate(entry.hero_tag, 60)}
+        </p>
+      )}
 
-      {entry.what_it_is && (
+      {entry.what_it_is && !entry.hero_tag && (
         <p className="entry-card-desc">{truncate(entry.what_it_is, 100)}</p>
       )}
 
@@ -98,25 +118,6 @@ export default function EntryCard({ entry, typeColorClass }: EntryCardProps) {
         )}
         <span className="entry-card-time">{formatRelativeDate(entry.created_at)}</span>
       </div>
-
-      {/* Xiaomi Notes style top image preview */}
-      {imageUrls[0] && (
-        <div style={{ margin: "-16px -16px 4px -16px", height: 130, overflow: "hidden", borderBottom: "1px solid var(--border-card)", position: "relative" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imageUrls[0]}
-            alt={entry.title}
-            loading="lazy"
-            decoding="async"
-            style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s ease" }}
-          />
-          {entry.command_snippet && (
-            <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", padding: "4px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#fff" }}>
-              <ExternalLink size={10} /> Link
-            </div>
-          )}
-        </div>
-      )}
 
       <style>{`
         .entry-card {

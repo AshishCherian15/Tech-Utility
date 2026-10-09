@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import CategoriesClient from "@/components/CategoriesClient";
 
 export const metadata: Metadata = {
   title: "Categories",
-  description: "Manage your Tech-Utility entry categories.",
+  description: "Manage your ByteShelf entry categories.",
 };
 
 export default async function CategoriesPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
   const { data: categories, error } = await supabase
     .from("categories")
     .select("*, entries(count)")
@@ -23,3 +28,4 @@ export default async function CategoriesPage() {
 
   return <CategoriesClient initialCategories={categoriesWithCounts} />;
 }
+

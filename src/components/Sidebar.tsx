@@ -13,6 +13,7 @@ import {
   Star,
   Clock,
   Users,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -22,8 +23,9 @@ import { useToast } from "@/components/Toast";
 import BrandMark from "@/components/BrandMark";
 
 interface SidebarProps {
-  user: User;
+  user: User | null;
   isOwner: boolean;
+  userRole: string;
 }
 
 const baseNavItems = [
@@ -34,11 +36,11 @@ const baseNavItems = [
 ];
 
 const quickLinks = [
-  { href: "/favorites", icon: Star, label: "Favorites" },
-  { href: "/dashboard?sort=recently_edited", icon: Clock, label: "Recently Edited" },
+  { href: "/favorites", icon: Star, label: "Favorites", authRequired: true },
+  { href: "/dashboard?sort=recently_edited", icon: Clock, label: "Recently Edited", authRequired: false },
 ];
 
-export default function Sidebar({ user, isOwner }: SidebarProps) {
+export default function Sidebar({ user, isOwner, userRole }: SidebarProps) {
   const pathname = usePathname();
   const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
@@ -62,21 +64,39 @@ export default function Sidebar({ user, isOwner }: SidebarProps) {
     }
   };
 
-  const avatarUrl = user.user_metadata?.avatar_url;
-  const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Ash";
-  const navItems = isOwner
-    ? [...baseNavItems.slice(0, 3), { href: "/users", icon: Users, label: "User accounts" }, baseNavItems[3]]
-    : baseNavItems;
+  const avatarUrl = user?.user_metadata?.avatar_url;
+  const name =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split("@")[0] ||
+    "User";
+
+  const canModerate = isOwner || userRole === "MODERATOR" || userRole === "ADMIN";
+
+  const navItems = [
+    baseNavItems[0], // Dashboard
+    baseNavItems[1], // Categories
+    ...(user ? [baseNavItems[2]] : []), // Trash
+    ...(canModerate
+      ? [{ href: "/review-queue", icon: ClipboardCheck, label: "Review Queue" }]
+      : []),
+    ...(isOwner
+      ? [{ href: "/users", icon: Users, label: "User accounts" }]
+      : []),
+    ...(user ? [baseNavItems[3]] : []), // Settings
+  ];
 
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div className="sidebar-logo" style={{ padding: "16px", gap: 14 }}>
-        <BrandMark size={48} />
-        <div>
-          <div className="sidebar-logo-name" style={{ fontSize: 18, fontWeight: 800 }}>Tech-Utility</div>
-          <div className="sidebar-logo-sub" style={{ fontSize: 12 }}>Private tech library</div>
-        </div>
+      <div className="sidebar-logo" style={{ padding: "20px 16px 16px" }}>
+        <img
+          src="/byteshelf-logo-horizontal.png"
+          alt="ByteShelf"
+          width={150}
+          height="auto"
+          style={{ display: "block" }}
+        />
       </div>
 
       {/* Add button */}
@@ -106,12 +126,16 @@ export default function Sidebar({ user, isOwner }: SidebarProps) {
 
         <div className="sidebar-nav-section">
           <div className="sidebar-nav-label">Quick Access</div>
-          {quickLinks.map(({ href, icon: Icon, label }) => (
+          {quickLinks.filter(l => !l.authRequired || user).map(({ href, icon: Icon, label }) => (
             <Link
               key={href}
               href={href}
               className="sidebar-nav-item"
-              aria-current={pathname === href.split("?")[0] && href !== "/dashboard" ? "page" : undefined}
+              aria-current={
+                pathname === href.split("?")[0] && href !== "/dashboard"
+                  ? "page"
+                  : undefined
+              }
             >
               <Icon size={16} aria-hidden="true" />
               {label}
@@ -120,7 +144,6 @@ export default function Sidebar({ user, isOwner }: SidebarProps) {
         </div>
       </nav>
 
-      {/* Spacer */}
       <div style={{ flex: 1 }} />
 
       {/* AI Badge */}
@@ -133,30 +156,38 @@ export default function Sidebar({ user, isOwner }: SidebarProps) {
 
       {/* User */}
       <div className="sidebar-user">
-        <div className="sidebar-avatar">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt={name} width={32} height={32} style={{ borderRadius: "50%" }} />
-          ) : (
-            <span>{name[0].toUpperCase()}</span>
-          )}
-        </div>
-        <div className="sidebar-user-info">
-          <div className="sidebar-user-name">{name}</div>
-          <div className="sidebar-user-email">{user.email}</div>
-        </div>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          disabled={signingOut}
-          aria-busy={signingOut}
-          className="btn btn-ghost btn-icon"
-          data-tooltip="Sign out"
-          style={{ marginLeft: "auto", flexShrink: 0, fontSize: 12, color: "var(--text-muted)" }}
-          aria-label={signingOut ? "Signing out" : "Sign out"}
-        >
-          ↩
-        </button>
+        {user ? (
+          <>
+            <div className="sidebar-avatar">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt={name} width={32} height={32} style={{ borderRadius: "50%" }} />
+              ) : (
+                <span>{name[0].toUpperCase()}</span>
+              )}
+            </div>
+            <div className="sidebar-user-info">
+              <div className="sidebar-user-name">{name}</div>
+              <div className="sidebar-user-email">{user.email}</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              aria-busy={signingOut}
+              className="btn btn-ghost btn-icon"
+              data-tooltip="Sign out"
+              style={{ marginLeft: "auto", flexShrink: 0, fontSize: 12, color: "var(--text-muted)" }}
+              aria-label={signingOut ? "Signing out" : "Sign out"}
+            >
+              ↩
+            </button>
+          </>
+        ) : (
+          <Link href="/login" className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }}>
+            Sign In
+          </Link>
+        )}
       </div>
 
       <style>{`
@@ -169,34 +200,17 @@ export default function Sidebar({ user, isOwner }: SidebarProps) {
           margin-bottom: 12px;
         }
 
-        .sidebar-logo-icon {
-          width: 36px;
-          height: 36px;
-          background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 0 16px rgba(59,130,246,0.4);
-          flex-shrink: 0;
-        }
-
-        .sidebar-logo-icon span {
-          font-size: 18px;
-          font-weight: 800;
-          color: white;
-        }
-
         .sidebar-logo-name {
-          font-size: 15px;
-          font-weight: 700;
+          font-size: 16px;
+          font-weight: 800;
           color: var(--text-primary);
-          letter-spacing: -0.3px;
+          letter-spacing: -0.4px;
         }
 
         .sidebar-logo-sub {
           font-size: 11px;
           color: var(--text-muted);
+          margin-top: 1px;
         }
 
         .sidebar-nav {

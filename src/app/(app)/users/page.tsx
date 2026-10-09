@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "User accounts",
-  description: "Create and manage invited Tech-Utility accounts.",
+  description: "Create and manage invited ByteShelf accounts.",
 };
 
 export default async function UsersPage() {
@@ -14,7 +14,7 @@ export default async function UsersPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
+  const ownerEmail = process.env.BYTESHELF_ADMIN_EMAIL?.trim().toLowerCase();
   if (!ownerEmail || user.email?.toLowerCase() !== ownerEmail) redirect("/dashboard");
 
   return (

@@ -13,8 +13,8 @@ function getSafeReturnPath(value: string | undefined): string {
   }
 
   try {
-    const target = new URL(value, "https://tech-utility.invalid");
-    if (target.origin !== "https://tech-utility.invalid") return "/dashboard";
+    const target = new URL(value, "https://byteshelf.invalid");
+    if (target.origin !== "https://byteshelf.invalid") return "/dashboard";
     return `${target.pathname}${target.search}${target.hash}`;
   } catch {
     return "/dashboard";
@@ -35,7 +35,7 @@ export default function LoginPage({
       : queryError === "account_inactive"
         ? "This account is disabled or has expired. Contact the owner to restore access, or sign in with another account."
         : queryError === "not_provisioned"
-          ? "This account has not been approved for Tech-Utility. Contact the owner or switch to an account they provisioned."
+          ? "This account has not been approved for ByteShelf. Contact the owner or switch to an account they provisioned."
           : queryError === "oauth"
             ? "Sign-in with your provider did not complete. Please try again or use another sign-in method."
           : null
@@ -43,8 +43,8 @@ export default function LoginPage({
   const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null);
   const accountDeletedNotice = deleted === "1"
     ? signout === "failed"
-      ? "Your Tech-Utility account and library data were deleted. Local sign-out may not have completed; close this tab."
-      : "Your Tech-Utility account and library data were deleted."
+      ? "Your ByteShelf account and library data were deleted. Local sign-out may not have completed; close this tab."
+      : "Your ByteShelf account and library data were deleted."
     : null;
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -76,6 +76,34 @@ export default function LoginPage({
     } catch (err) {
       console.error('Email auth exception:', err);
       setError("Sign-in failed. Please try again.");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading("email");
+    setError(null);
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setError("An account with this email already exists. Please sign in instead.");
+        return;
+      }
+
+      setRecoveryNotice("Check your email for the confirmation link to complete sign up.");
+    } catch (err) {
+      setError("Sign-up failed. Please try again.");
     } finally {
       setLoading(null);
     }
@@ -168,8 +196,8 @@ export default function LoginPage({
         <div className="login-brand">
           <div className="login-logo"><BrandMark size={56} /></div>
           <div className="login-brand-text">
-            <h1 className="login-title">Tech-Utility</h1>
-            <p className="login-tagline">Your private tech library</p>
+            <h1 className="login-title">ByteShelf</h1>
+            <p className="login-tagline">Your shelf of useful tech</p>
           </div>
         </div>
 
@@ -212,19 +240,7 @@ export default function LoginPage({
           <div role="group" aria-label="Sign-in method" style={{ display: "flex", gap: 8, marginBottom: 20, background: "rgba(255,255,255,0.03)", padding: 4, borderRadius: 10 }}>
             <button
               type="button"
-              onClick={() => setAuthMode("oauth")}
-              aria-pressed={authMode === "oauth"}
-              style={{
-                flex: 1, padding: "8px 12px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer",
-                background: authMode === "oauth" ? "var(--bg-card)" : "transparent",
-                color: authMode === "oauth" ? "var(--text-primary)" : "var(--text-muted)",
-              }}
-            >
-              Google or GitHub
-            </button>
-            <button
-              type="button"
-              onClick={() => setAuthMode("email")}
+              onClick={() => { setAuthMode("email"); setError(null); setRecoveryNotice(null); }}
               aria-pressed={authMode === "email"}
               style={{
                 flex: 1, padding: "8px 12px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer",
@@ -232,12 +248,23 @@ export default function LoginPage({
                 color: authMode === "email" ? "var(--text-primary)" : "var(--text-muted)",
               }}
             >
-              Email & Password
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAuthMode("oauth"); setError(null); setRecoveryNotice(null); }}
+              aria-pressed={authMode === "oauth"}
+              style={{
+                flex: 1, padding: "8px 12px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer",
+                background: authMode === "oauth" ? "var(--bg-card)" : "transparent",
+                color: authMode === "oauth" ? "var(--text-primary)" : "var(--text-muted)",
+              }}
+            >
+              Sign Up
             </button>
           </div>
 
-          {authMode === "email" ? (
-            <form onSubmit={handleEmailAuth} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <form onSubmit={authMode === "email" ? handleEmailAuth : handleSignUp} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <input
                 id="login-email"
                 type="email"
@@ -259,7 +286,7 @@ export default function LoginPage({
                   type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   aria-label="Password"
-                  autoComplete="current-password"
+                  autoComplete={authMode === "email" ? "current-password" : "new-password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -280,19 +307,25 @@ export default function LoginPage({
                 className="btn btn-primary"
                 style={{ width: "100%", padding: "12px", borderRadius: 10, marginTop: 4, fontWeight: 600 }}
               >
-                {loading === "email" ? "Signing in…" : "Sign in"}
+                {loading === "email" ? (authMode === "email" ? "Signing in…" : "Signing up…") : (authMode === "email" ? "Sign in" : "Sign up")}
               </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={!!loading}
-                onClick={requestPasswordReset}
-                style={{ minHeight: 44, color: "var(--text-accent)" }}
-              >
-                {loading === "reset" ? "Sending instructions..." : "Forgot password?"}
-              </button>
+              {authMode === "email" && (
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={!!loading}
+                  onClick={requestPasswordReset}
+                  style={{ minHeight: 44, color: "var(--text-accent)" }}
+                >
+                  {loading === "reset" ? "Sending instructions..." : "Forgot password?"}
+                </button>
+              )}
             </form>
-          ) : (
+
+            <div className="login-divider">
+              <span>Or</span>
+            </div>
+
             <div className="login-buttons">
               <button
                 id="btn-sign-in-google"
@@ -312,30 +345,20 @@ export default function LoginPage({
                 )}
                 Continue with Google
               </button>
-              <button
-                id="btn-sign-in-github"
-                className="login-btn login-btn-github"
-                onClick={() => signIn("github")}
-                disabled={!!loading}
-              >
-                {loading === "github" ? <div className="login-spinner" /> : <GitBranch size={18} />}
-                Continue with GitHub
-              </button>
             </div>
-          )}
 
           <div className="login-divider">
-            <span>Private access only</span>
+            <span>Contributor Access</span>
           </div>
 
           <div className="login-features">
             <div className="login-feature">
               <Search size={14} />
-              <span>Instant search across your knowledge base</span>
+              <span>Instant search across the knowledge base</span>
             </div>
             <div className="login-feature">
               <Database size={14} />
-              <span>Structured knowledge base</span>
+              <span>Contribute structured entries</span>
             </div>
             <div className="login-feature">
               <Zap size={14} />
@@ -343,13 +366,13 @@ export default function LoginPage({
             </div>
             <div className="login-feature">
               <Shield size={14} />
-              <span>Private, per-account data access</span>
+              <span>Moderated & high-quality content</span>
             </div>
           </div>
         </div>
 
         <p className="login-footer">
-          Private workspace · Sign-in is for invited accounts only
+          Sign up to contribute to ByteShelf
         </p>
         <nav className="login-legal-links" aria-label="Legal information">
           <Link href="/privacy">Privacy</Link>

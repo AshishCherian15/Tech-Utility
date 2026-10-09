@@ -16,7 +16,6 @@ export async function GET(_req: Request, { params }: RouteParams) {
     .from("entries")
     .select("*, category:categories(*), links:entry_links(*)")
     .eq("id", id)
-    .eq("user_id", user.id)
     .is("deleted_at", null)
     .single();
 
@@ -30,11 +29,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
-  const isOwner = Boolean(user.email && ownerEmail && user.email.toLowerCase() === ownerEmail);
-  const canEditDeleteEntries = user.app_metadata?.can_edit_delete_entries === true || isOwner;
+  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).single();
+  const role = dbUser?.role || "CONTRIBUTOR";
+  const isModOrAdmin = ["MODERATOR", "ADMIN"].includes(role);
 
-  // Allow editing if user owns the entry AND has edit permission OR is owner
   const { data: existing, error: existingError } = await supabase
     .from("entries")
     .select("id, user_id")
@@ -45,12 +43,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (existing.user_id !== user.id && !isOwner) {
+  if (existing.user_id !== user.id && !isModOrAdmin) {
     return NextResponse.json({ error: "You can only edit your own entries" }, { status: 403 });
-  }
-
-  if (existing.user_id === user.id && !canEditDeleteEntries) {
-    return NextResponse.json({ error: "You do not have permission to edit entries" }, { status: 403 });
   }
 
   let body: unknown;
@@ -74,7 +68,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       .from("categories")
       .select("id")
       .eq("id", changes.category_id)
-      .eq("user_id", user.id)
       .maybeSingle();
     if (categoryError) {
       console.error("Entry category validation failed:", categoryError.message);
@@ -85,11 +78,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
   }
 
+  let finalStatus = changes.status;
+  if (finalStatus === "PUBLISHED" && !["TRUSTED_CONTRIBUTOR", "MODERATOR", "ADMIN"].includes(role)) {
+    finalStatus = "PENDING";
+  }
+  if (finalStatus) {
+    changes.status = finalStatus;
+  }
+
   const { data, error } = await supabase
     .from("entries")
     .update({ ...changes, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("user_id", user.id)
     .select()
     .single();
 
@@ -106,11 +106,10 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
-  const isOwner = Boolean(user.email && ownerEmail && user.email.toLowerCase() === ownerEmail);
-  const canEditDeleteEntries = user.app_metadata?.can_edit_delete_entries === true || isOwner;
+  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).single();
+  const role = dbUser?.role || "CONTRIBUTOR";
+  const isModOrAdmin = ["MODERATOR", "ADMIN"].includes(role);
 
-  // Check ownership - owner can delete any entry
   const { data: existing, error: existingError } = await supabase
     .from("entries")
     .select("id, user_id")
@@ -121,12 +120,8 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (existing.user_id !== user.id && !isOwner) {
+  if (existing.user_id !== user.id && !isModOrAdmin) {
     return NextResponse.json({ error: "You can only delete your own entries" }, { status: 403 });
-  }
-
-  if (existing.user_id === user.id && !canEditDeleteEntries) {
-    return NextResponse.json({ error: "You do not have permission to delete entries" }, { status: 403 });
   }
 
   // Soft delete only — set deleted_at

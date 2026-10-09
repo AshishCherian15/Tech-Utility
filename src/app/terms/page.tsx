@@ -1,48 +1,43 @@
 import type { Metadata } from "next";
-import BackLink from "@/components/BackLink";
 
 export const metadata: Metadata = {
-  title: "Terms",
-  description: "Terms for invited users of the Tech-Utility private knowledge library.",
+  title: "Terms of Service",
+  description: "Terms of Service for ByteShelf.",
 };
 
 export default function TermsPage() {
   return (
-    <main className="legal-page">
-      <BackLink href="/login">Back to sign in</BackLink>
-      <h1>Terms of use</h1>
-      <p>Draft terms for the private, owner-provisioned Tech-Utility app.</p>
-      <aside className="legal-draft-notice" role="note">
-        These draft terms are not legal advice. Before inviting users, add the owner&apos;s legal
-        identity, contact details, and governing jurisdiction, and have the terms reviewed for
-        the users&apos; jurisdictions.
-      </aside>
-      <h2>Access and account security</h2>
-      <p>
-        Access is invitation-only and may be disabled or expire. Keep credentials private and
-        notify the owner if you suspect an account was accessed without permission. Do not share
-        an account or attempt to access another user&apos;s records.
-      </p>
-      <h2>Your content</h2>
-      <p>
-        You remain responsible for the content, links, images, and commands you save. Only add
-        material you have the right to store and use. Review AI-generated drafts before saving;
-        the app does not guarantee that generated content is accurate or safe.
-      </p>
-      <h2>Service and payments</h2>
-      <p>
-        The current app has no checkout, subscription, or paid plan. It is provided as a
-        private tool and may change or be unavailable. No payment or refund terms apply to the
-        current version.
-      </p>
-      <h2>Account closure</h2>
-      <p>
-        Signed-in users can request permanent deletion of their Tech-Utility account, library data,
-        and uploaded images from Settings by entering the signed-in account&apos;s email as
-        confirmation. This action cannot be undone. If deletion reports an error, contact the
-        owner before retrying because uploaded files may already have been removed. Hosting and
-        service-provider backups may retain data according to their own retention schedules.
-      </p>
-    </main>
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "64px 24px", lineHeight: 1.6 }}>
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 24 }}>Terms of Service</h1>
+      <p style={{ color: "var(--text-muted)", marginBottom: 32 }}>Last updated: {new Date().toLocaleDateString()}</p>
+      
+      <div style={{ color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: 24 }}>
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>1. Acceptance of Terms</h2>
+          <p>By accessing and using ByteShelf, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our service.</p>
+        </section>
+
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>2. Description of Service</h2>
+          <p>ByteShelf is a knowledge base platform for sharing technical tips, commands, and discoveries. We reserve the right to modify, suspend, or discontinue the service at any time without notice.</p>
+        </section>
+
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>3. User Conduct and Content</h2>
+          <p>You are solely responsible for any content you post on ByteShelf. By submitting content, you grant us a non-exclusive, worldwide, royalty-free license to use, display, and distribute your content in connection with the service.</p>
+          <p style={{ marginTop: 12 }}>You agree not to post content that is illegal, abusive, or infringes on the intellectual property rights of others. We reserve the right to remove any content or terminate accounts at our sole discretion.</p>
+        </section>
+
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>4. Disclaimer of Warranties</h2>
+          <p>ByteShelf is provided "as is" without warranties of any kind, whether express or implied. We do not guarantee that the service will be uninterrupted or error-free. The snippets and commands on this platform are user-generated; use them at your own risk.</p>
+        </section>
+
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>5. Limitation of Liability</h2>
+          <p>In no event shall ByteShelf or its operators be liable for any indirect, incidental, special, or consequential damages arising out of or in connection with your use of the service.</p>
+        </section>
+      </div>
+    </div>
   );
 }

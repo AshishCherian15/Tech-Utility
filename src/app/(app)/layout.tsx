@@ -12,11 +12,8 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
-  const ownerEmail = process.env.ASH_OWNER_EMAIL?.trim().toLowerCase();
-  const isOwner = Boolean(ownerEmail && user.email?.toLowerCase() === ownerEmail);
+  const ownerEmail = process.env.BYTESHELF_ADMIN_EMAIL?.trim().toLowerCase();
+  const isOwner = Boolean(user && ownerEmail && user.email?.toLowerCase() === ownerEmail);
 
   // Fetch entries for command palette (id + title + tags + type only)
   const { data: entries, error } = await supabase
@@ -27,8 +24,16 @@ export default async function AppLayout({
     .limit(500);
   if (error) throw error;
 
+  let userRole = "VISITOR";
+  if (user) {
+    const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).single();
+    if (dbUser) {
+      userRole = dbUser.role;
+    }
+  }
+
   return (
-    <ShellLayout user={user} entries={entries} isOwner={isOwner}>
+    <ShellLayout user={user} entries={entries} isOwner={isOwner} userRole={userRole}>
       {children}
     </ShellLayout>
   );

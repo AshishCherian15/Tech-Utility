@@ -12,19 +12,32 @@ const deploymentUrl =
 export const metadata: Metadata = {
   metadataBase: new URL(deploymentUrl),
   title: {
-    default: "Tech-Utility — Your Private Tech Library",
-    template: "%s | Tech-Utility",
+    default: "ByteShelf — Your shelf of useful tech",
+    template: "%s | ByteShelf",
   },
   description:
-    "A private, searchable knowledge base for tips, tricks, hacks, apps, commands, tools and prompts — the things you find once and shouldn't have to Google again.",
-  keywords: ["personal knowledge base", "tech tips", "commands", "bookmarks", "tech memory"],
-  authors: [{ name: "Ash" }],
-  creator: "Ash",
-  robots: "noindex, nofollow",
+    "A searchable, growing library of useful tech tools, tips, websites, apps, commands, and learning resources — discovered once, explained clearly, kept up to date.",
+  keywords: [
+    "tech tools",
+    "developer resources",
+    "windows tips",
+    "useful websites",
+    "ai tools",
+    "browser extensions",
+    "student resources",
+    "tech library",
+  ],
+  authors: [{ name: "ByteShelf" }],
+  creator: "ByteShelf",
+  // Public site — indexable. Auth-gated pages get noindex via their own metadata.
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/tech-utility-icon.svg", sizes: "any", type: "image/svg+xml" },
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
@@ -32,9 +45,24 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    title: "Tech-Utility — Your Private Tech Library",
-    description: "A private, searchable knowledge base for your technical discoveries.",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Tech-Utility private tech library" }],
+    siteName: "ByteShelf",
+    title: "ByteShelf — Your shelf of useful tech",
+    description:
+      "A searchable library of useful tech tools, tips, websites, apps, commands, and learning resources.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "ByteShelf — Your shelf of useful tech",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ByteShelf — Your shelf of useful tech",
+    description:
+      "A searchable library of useful tech tools, tips, websites, apps, commands, and learning resources.",
   },
 };
 

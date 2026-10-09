@@ -33,7 +33,7 @@ This project is currently pre-release. Only the `main` branch is maintained.
 ### Row Level Security (RLS)
 - The schema enables RLS on all five application tables
 - Policies require the row `user_id` to match `auth.uid()` and the account to have an explicitly provisioned, enabled role; entry category references and child-row entry references must belong to the same user
-- During setup, the existing owner Auth user must be assigned the trusted `owner` role in `app_metadata` using the documented Supabase SQL setup step; `ASH_OWNER_EMAIL` only authorizes the application proxy and does not bypass database RLS
+- During setup, the existing owner Auth user must be assigned the trusted `owner` role in `app_metadata` using the documented Supabase SQL setup step; `BYTESHELF_ADMIN_EMAIL` only authorizes the application proxy and does not bypass database RLS
 - The configured Supabase project previously returned `PGRST205` for `public.entries`; source policies are not evidence that the schema has been applied or verified in the target project
 - There are no unauthenticated read paths, not even for the dashboard
 
@@ -44,7 +44,7 @@ This project is currently pre-release. Only the `main` branch is maintained.
 - The system prompt forbids the model from inventing URLs or fabricating facts not in the input
 
 ### Secret Management
-- `SUPABASE_SERVICE_ROLE_KEY`, `ASH_OWNER_EMAIL`, and optional server-side AI keys belong only in deployment secrets and a git-ignored `.env.local`
+- `SUPABASE_SERVICE_ROLE_KEY`, `BYTESHELF_ADMIN_EMAIL`, and optional server-side AI keys belong only in deployment secrets and a git-ignored `.env.local`
 - The only key in the client bundle is `NEXT_PUBLIC_SUPABASE_ANON_KEY`, which is constrained entirely by RLS
 - Optional user-supplied AI keys are stored in browser local storage and are readable by same-origin JavaScript; use server-managed keys or avoid saving keys on shared devices
 

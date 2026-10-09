@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Choose a new password",
-  description: "Set a new password for your Tech-Utility account.",
+  description: "Set a new password for your ByteShelf account.",
 };
 
 export default function ResetPasswordLayout({

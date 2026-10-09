@@ -2,7 +2,7 @@
 
 > **Last Updated:** October 5, 2026
 > **Repository:** [https://github.com/AshishCherian15/Ash-Tech](https://github.com/AshishCherian15/Ash-Tech)
-> **Status:** The main application flows are implemented, but the app is **not yet verified or ready for invited-user launch**. The schema is installed on the confirmed staging project; all five tables, RLS flags/policies, the private image bucket, and trusted owner metadata were verified. Local `ASH_OWNER_EMAIL` is configured. Owner Google sign-in and basic entry create/read/soft-delete were smoke-tested; cross-account isolation and the broader authenticated workflows remain untested. Premium visual design system has been implemented with modern branding.
+> **Status:** The main application flows are implemented, but the app is **not yet verified or ready for invited-user launch**. The schema is installed on the confirmed staging project; all five tables, RLS flags/policies, the private image bucket, and trusted owner metadata were verified. Local `BYTESHELF_ADMIN_EMAIL` is configured. Owner Google sign-in and basic entry create/read/soft-delete were smoke-tested; cross-account isolation and the broader authenticated workflows remain untested. Premium visual design system has been implemented with modern branding.
 
 ---
 

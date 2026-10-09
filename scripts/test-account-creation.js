@@ -11,7 +11,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 async function testAccountCreation() {
-  const testEmail = 'testuser@tech-utility.test';
+  const testEmail = 'testuser@byteshelf.test';
   const testPassword = 'Test@12345678';
   const testUsername = 'testuser';
 

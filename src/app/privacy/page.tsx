@@ -1,60 +1,43 @@
 import type { Metadata } from "next";
-import BackLink from "@/components/BackLink";
 
 export const metadata: Metadata = {
-  title: "Privacy",
-  description: "Learn what Tech-Utility stores and how account, library, and AI autofill data is handled.",
+  title: "Privacy Policy",
+  description: "Privacy Policy for ByteShelf.",
 };
 
 export default function PrivacyPage() {
   return (
-    <main className="legal-page">
-      <BackLink href="/login">Back to sign in</BackLink>
-      <h1>Privacy</h1>
-      <p>Draft privacy information for the private Tech-Utility knowledge library.</p>
-      <aside className="legal-draft-notice" role="note">
-        Before inviting users, the owner must add a real contact address, identify the applicable
-        data controller and jurisdictions, and have this notice reviewed for local law.
-      </aside>
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "64px 24px", lineHeight: 1.6 }}>
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 24 }}>Privacy Policy</h1>
+      <p style={{ color: "var(--text-muted)", marginBottom: 32 }}>Last updated: {new Date().toLocaleDateString()}</p>
+      
+      <div style={{ color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: 24 }}>
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>1. Information We Collect</h2>
+          <p>We collect information you provide directly to us when you create an account, update your profile, or submit content to ByteShelf. This may include your name, email address, and any information contained in the content you submit.</p>
+          <p style={{ marginTop: 12 }}>We also automatically collect certain information about your device and how you interact with our service, including IP addresses, browser types, and usage data, through the use of cookies and similar technologies.</p>
+        </section>
 
-      <h2>Information the app stores</h2>
-      <p>
-        Sign-in is provided by Supabase Auth and the enabled Google or GitHub provider. The app
-        stores account identifiers, the email and profile fields returned by the provider, and
-        knowledge entries, categories, links, timestamps, and uploaded images that users add.
-        Email/password users may request account-recovery messages through the configured
-        Supabase Auth email provider.
-      </p>
-      <h2>AI autofill</h2>
-      <p>
-        AI autofill is optional. When used, the text submitted for drafting and the selected
-        provider key are sent to this app&apos;s authenticated server endpoint and then to the
-        configured AI provider. Provider terms and privacy policies also apply. The key is held
-        in browser memory only, is not intentionally written to browser storage, and is cleared
-        on page reload or sign-out. Custom OpenAI-compatible endpoints must use public HTTPS.
-      </p>
-      <h2>Cookies and storage</h2>
-      <p>
-        Authentication requires session cookies. The app does not currently use analytics or
-        advertising cookies. AI provider, model, and custom endpoint preferences may be stored
-        in browser local storage; API keys are not stored there.
-      </p>
-      <h2>Hosting and retention</h2>
-      <p>
-        App hosting is provided by Vercel and account, database, and image storage by Supabase.
-        Deleting an entry moves it to Trash; no automatic purge schedule is configured, so it
-        remains until restored or separately removed. JSON export does not include image file
-        bytes.
-      </p>
-      <h2>Your choices</h2>
-      <p>
-        Users can export their library from Settings, clear the in-memory AI key, and request
-        permanent deletion of their account, library
-        data, and uploaded images from Settings by entering the signed-in account&apos;s email as
-        confirmation. Deletion is performed by the app&apos;s configured Supabase project.
-        Provider backups may retain data under their own retention schedules; this draft notice
-        needs provider-specific retention periods and local legal review before inviting users.
-      </p>
-    </main>
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>2. How We Use Your Information</h2>
+          <p>We use the information we collect to provide, maintain, and improve our services. This includes authenticating users, processing and publishing your submissions, and communicating with you about your account or our services.</p>
+        </section>
+
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>3. Information Sharing</h2>
+          <p>The content you submit to ByteShelf (such as tips, commands, and comments) is intended for public consumption and will be visible to other users. We do not sell your personal information. We may share your information with third-party service providers who perform services on our behalf (e.g., hosting providers like Vercel and Supabase).</p>
+        </section>
+
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>4. Data Security</h2>
+          <p>We take reasonable measures to help protect your personal information from loss, theft, misuse, unauthorized access, disclosure, alteration, and destruction. However, no internet transmission is completely secure, and we cannot guarantee the absolute security of your data.</p>
+        </section>
+
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>5. Your Rights</h2>
+          <p>Depending on your location, you may have certain rights regarding your personal information, such as the right to access, correct, or delete your data. You can manage most of your information through your account settings or by contacting us.</p>
+        </section>
+      </div>
+    </div>
   );
 }

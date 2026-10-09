@@ -103,6 +103,9 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
     command_snippet: entry?.command_snippet ?? "",
     images: entry?.images ?? [] as string[],
     color: entry?.color ?? "",
+    status: entry?.status ?? "DRAFT",
+    hero_tag: entry?.hero_tag ?? "",
+    cover_image_url: entry?.cover_image_url ?? "",
   });
   const imageUrls = useImageUrls(form.images);
 
@@ -195,6 +198,7 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
           difficulty: draft.difficulty ?? prev.difficulty,
           platform: draft.platform ?? prev.platform,
           command_snippet: draft.command_snippet ?? prev.command_snippet,
+          hero_tag: draft.hero_tag ?? prev.hero_tag,
         }));
         setAiDrafted(true);
         setShowAiPanel(false);
@@ -250,6 +254,8 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
         platform: form.platform || null,
         color: form.color || null,
         tags: form.tags,
+        hero_tag: form.hero_tag || null,
+        cover_image_url: form.cover_image_url || null,
       };
 
       if (isEdit) {
@@ -327,14 +333,29 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
             AI draft
           </button>
           <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              set("status", "DRAFT");
+              const ev = { preventDefault: () => {} } as React.FormEvent;
+              handleSubmit(ev);
+            }}
+            disabled={saving || !form.title.trim()}
+            id="btn-save-draft"
+          >
+            {saving && form.status === "DRAFT" ? <Loader2 size={14} aria-hidden="true" className="spin" /> : null}
+            {isEdit ? "Save Draft" : "Save as Draft"}
+          </button>
+          <button
             form="entry-form"
             type="submit"
             className="btn btn-primary btn-sm"
+            onClick={() => set("status", "PENDING")}
             disabled={saving || !form.title.trim()}
-            id="btn-save-entry"
+            id="btn-submit-review"
           >
-            {saving ? <Loader2 size={14} aria-hidden="true" className="spin" /> : null}
-            {saving ? "Saving…" : isEdit ? "Save Changes" : "Create Entry"}
+            {saving && form.status === "PENDING" ? <Loader2 size={14} aria-hidden="true" className="spin" /> : null}
+            {saving && form.status === "PENDING" ? "Submitting…" : isEdit ? "Submit for Review" : "Submit for Review"}
           </button>
         </div>
       </div>
@@ -446,6 +467,18 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
                 onChange={e => set("title", e.target.value)}
                 maxLength={500}
                 required
+              />
+            </div>
+            
+            <div className="form-field form-field-wide">
+              <label htmlFor="field-hero-tag" className="form-label">Hero Tag</label>
+              <input
+                id="field-hero-tag"
+                className={cn("input", aiDrafted && "ai-drafted-field")}
+                placeholder="A short punchy phrase for the preview card"
+                value={form.hero_tag}
+                onChange={e => set("hero_tag", e.target.value)}
+                maxLength={100}
               />
             </div>
 

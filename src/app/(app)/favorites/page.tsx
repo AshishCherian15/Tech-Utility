@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DashboardClient from "@/components/DashboardClient";
 
 export const metadata: Metadata = {
   title: "Favorites",
-  description: "Your starred Tech-Utility entries.",
+  description: "Your starred ByteShelf entries.",
 };
 
 export default async function FavoritesPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
 
   const [entriesResult, categoriesResult] = await Promise.all([
     supabase
@@ -31,3 +36,4 @@ export default async function FavoritesPage() {
     />
   );
 }
+

@@ -1031,6 +1031,8 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   const { success, error: toastError } = useToast();
@@ -1052,7 +1054,7 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `tech-utility-export-${new Date().toISOString().split("T")[0]}.json`;
+      a.download = `byteshelf-export-${new Date().toISOString().split("T")[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
       success("Library export downloaded.");
@@ -1090,7 +1092,7 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
       }
       router.refresh();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Failed to import — check that the file is a valid Tech-Utility JSON export.");
+      toastError(err instanceof Error ? err.message : "Failed to import — check that the file is a valid ByteShelf JSON export.");
     } finally {
       setImportingFile(false);
       e.target.value = "";
@@ -1136,6 +1138,41 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
     } catch {
       toastError("Could not sign out. Check your connection and try again.");
       setSigningOut(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword.trim()) return;
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      success("Password updated successfully.");
+      setNewPassword("");
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not update password.");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleClearCache = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      localStorage.clear();
+      sessionStorage.clear();
+      success("Cache cleared. Reloading...");
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (err) {
+      toastError("Failed to clear cache");
     }
   };
 
@@ -1225,7 +1262,7 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
             <div className="settings-row">
               <div>
                 <div className="settings-row-title">Import Library</div>
-                <div className="settings-row-desc">Import entries, categories, and links from a Tech-Utility backup (up to 5,000 entries / 10 MB). Duplicate entries are kept; matching categories are reused. Uploaded image files are not transferred.</div>
+                <div className="settings-row-desc">Import entries, categories, and links from a ByteShelf backup (up to 5,000 entries / 10 MB). Duplicate entries are kept; matching categories are reused. Uploaded image files are not transferred.</div>
               </div>
               <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>
                 {importingFile ? <Loader2 size={14} style={{ animation: "spin 0.7s linear infinite" }} /> : <Upload size={14} />}
@@ -1241,7 +1278,7 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
           <div className="settings-card">
             <div className="settings-row-title">Permanently delete your account and data</div>
             <div className="settings-row-desc" style={{ marginTop: 6 }}>
-              This permanently deletes your Tech-Utility account, library data, and uploaded images.
+              This permanently deletes your ByteShelf account, library data, and uploaded images.
               Export your library first if you may need it. This action cannot be undone.
               Provider backups may retain data according to their retention policies.
             </div>
@@ -1280,7 +1317,31 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
         {/* Security */}
         <div className="settings-section">
           <div className="settings-section-title">Security</div>
-          <div className="settings-card">
+          <div className="settings-card" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <div className="settings-row">
+              <div style={{ flex: 1 }}>
+                <div className="settings-row-title">Change Password</div>
+                <div className="settings-row-desc">Update your password. Works for all accounts, including those signed in via Google.</div>
+                <form onSubmit={handleChangePassword} style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", maxWidth: 400 }}>
+                  <input
+                    type="password"
+                    placeholder="New password (12+ characters)"
+                    minLength={12}
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="input"
+                    style={{ flex: 1, minWidth: 200 }}
+                  />
+                  <button type="submit" disabled={changingPassword || !newPassword} className="btn btn-primary btn-sm">
+                    {changingPassword ? "Updating…" : "Update"}
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <div className="settings-divider" style={{ margin: 0 }} />
+
             <div className="settings-row">
               <div>
                 <div className="settings-row-title">Two-Factor Auth (TOTP)</div>
@@ -1314,6 +1375,21 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
             </div>
           </div>
         )}
+
+        <div className="settings-section">
+          <div className="settings-section-title">Troubleshooting</div>
+          <div className="settings-card">
+            <div className="settings-row">
+              <div>
+                <div className="settings-row-title">Clear App Cache</div>
+                <div className="settings-row-desc">If the app is behaving unexpectedly or not loading properly, clearing the local cache might fix it. This will reload the page.</div>
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={handleClearCache}>
+                Clear Cache & Reload
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Danger zone */}
         <div className="settings-section">

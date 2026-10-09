@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import TrashClient from "@/components/TrashClient";
 
@@ -9,6 +10,10 @@ export const metadata: Metadata = {
 
 export default async function TrashPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
   const { data: entries, error } = await supabase
     .from("entries")
     .select("*, category:categories(*)")
@@ -18,3 +23,4 @@ export default async function TrashPage() {
 
   return <TrashClient initialEntries={entries} />;
 }
+

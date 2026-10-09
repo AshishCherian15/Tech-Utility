@@ -365,7 +365,7 @@ export async function POST(request: Request) {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${input.api_key}`,
-          ...(provider === "openrouter" ? { "X-Title": "Tech-Utility" } : {}),
+          ...(provider === "openrouter" ? { "X-Title": "ByteShelf" } : {}),
         },
         body: JSON.stringify({
           model,

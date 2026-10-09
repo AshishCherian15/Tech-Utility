@@ -12,18 +12,5 @@ export function createClient() {
     throw new Error('Missing Supabase environment variables');
   }
 
-  console.log('Supabase Client Init:', {
-    url: url.substring(0, 30) + '...',
-    key: key.substring(0, 50) + '...',
-    keyLength: key.length,
-  });
-
-  const client = createBrowserClient(url, key);
-
-  // Add auth state change listener to debug
-  client.auth.onAuthStateChange((event, session) => {
-    console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
-  });
-
-  return client;
+  return createBrowserClient(url, key);
 }

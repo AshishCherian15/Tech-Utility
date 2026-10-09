@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import EntryForm from "@/components/EntryForm";
 import type { EntryType } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "New Entry",
-  description: "Add a new tech tip, command, app, tool or discovery to Tech-Utility.",
+  description: "Add a new tech tip, command, app, tool or discovery to ByteShelf.",
 };
 
 interface NewEntryPageProps {
@@ -17,6 +18,11 @@ export default async function NewEntryPage({ searchParams }: NewEntryPageProps) 
   const allowedTypes: EntryType[] = ["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"];
   const initialType = allowedTypes.find((type) => type === shared.type);
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
   const { data: categories, error } = await supabase
     .from("categories")
     .select("*")

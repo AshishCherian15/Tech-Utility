@@ -1,7 +1,7 @@
-# Tech-Utility
+# ByteShelf
 
 <div align="center">
-  <img src="./public/tech-utility-icon.svg" alt="Tech-Utility logo" width="96" />
+  <img src="./public/byteshelf-icon.svg" alt="ByteShelf logo" width="96" />
   
   **Your private, searchable tech memory.**
 
@@ -14,9 +14,9 @@
 
 ---
 
-## What is Tech-Utility?
+## What is ByteShelf?
 
-Tech-Utility is a private, login-protected personal knowledge base for **tips, tricks, apps, websites, tools, commands, extensions, guides and prompts** — the things you find once, forget you saved, and end up Googling again.
+ByteShelf is a private, login-protected personal knowledge base for **tips, tricks, apps, websites, tools, commands, extensions, guides and prompts** — the things you find once, forget you saved, and end up Googling again.
 
 **One search box. One place. Built for a single owner.**
 
@@ -38,7 +38,7 @@ Tech-Utility is a private, login-protected personal knowledge base for **tips, t
 
 ### 🎨 Visual & Desktop UX
 - **Collapsible Side Navigation Panel**: Floating expand/collapse button (`<PanelLeftClose>` / `<PanelLeftOpen>`) for full-screen entry browsing.
-- **Tech-Utility Brand Mark**: A consistent vector mark in the sidebar, mobile navigation, and login screen.
+- **ByteShelf Brand Mark**: A consistent vector mark in the sidebar, mobile navigation, and login screen.
 - **Xiaomi Notes-Style Card Previews**: Masonry & grid cards showcase top header image previews for entries with attached screenshots or site links.
 - **Global Command Palette (`Ctrl + K`)**: Keyboard-driven navigation and quick search across up to 500 recently edited entries.
 - **Toast Notifications System**: Slide-up feedback toasts for success, error, info, warning, and AI events.
@@ -67,7 +67,7 @@ Ash-Tech/
 │   ├── schema.sql              # Full Supabase schema + RLS policies
 │   └── seed_sample_entries.sql # Seed script for CodeFronts & Windows Clipboard
 ├── public/
-│   ├── tech-utility-icon.svg   # Tech-Utility vector app icon
+│   ├── byteshelf-icon.svg   # ByteShelf vector app icon
 │   ├── icon-192.png            # PWA 192px app icon
 │   ├── icon-512.png            # PWA 512px app icon
 │   ├── logo.webp               # Brand image
@@ -98,7 +98,7 @@ Supabase project. Test the full recovery email flow before deployment.
 
 ### OAuth provider setup
 
-Tech-Utility sends OAuth users back to its own `/auth/callback` route. Configure these
+ByteShelf sends OAuth users back to its own `/auth/callback` route. Configure these
 separate redirect settings for each environment:
 
 1. In Supabase Auth URL Configuration, set the production Site URL to the deployed
@@ -109,13 +109,13 @@ separate redirect settings for each environment:
    no longer needed.
 2. In the Google or GitHub provider console, set its authorized redirect URI to the
    Supabase Auth callback URL shown on that provider's Supabase configuration page.
-   This is distinct from Tech-Utility's `/auth/callback` URL. For Google, also add the
+   This is distinct from ByteShelf's `/auth/callback` URL. For Google, also add the
    local and production app origins under Authorized JavaScript origins.
 3. Confirm the Google OAuth consent-screen audience and allowed/test users permit
    the intended private invitees. Do not enable public signup in Supabase Auth.
 4. Verify sign-in in a normal, JavaScript-enabled browser using an owner and a
    provisioned test account. A provider/browser error before the redirect returns
-   to Tech-Utility does not exercise the app callback or prove the callback is broken.
+   to ByteShelf does not exercise the app callback or prove the callback is broken.
 
 ### Database setup (required)
 
@@ -149,7 +149,7 @@ RETURNING id, email;
 Expect exactly one row. If no row is returned, stop and verify the owner account
 before proceeding. This is required because database RLS rejects authenticated
 accounts without an explicit trusted owner/permanent/temporary role; the application
-proxy's `ASH_OWNER_EMAIL` setting does not bypass database RLS. Do not copy these
+proxy's `BYTESHELF_ADMIN_EMAIL` setting does not bypass database RLS. Do not copy these
 claims into user-editable metadata.
 
 After applying it, verify all five tables exist and RLS is enabled:
@@ -182,7 +182,7 @@ Then verify reads and owner isolation with disposable staging accounts before us
 the project for real data. The owner can create invited accounts, enable/disable them,
 and renew expired temporary accounts for a bounded preset duration from Settings.
 Temporary accounts always have an expiry (at most 30 days). These operations require
-`SUPABASE_SERVICE_ROLE_KEY` and `ASH_OWNER_EMAIL`; never expose the service role key
+`SUPABASE_SERVICE_ROLE_KEY` and `BYTESHELF_ADMIN_EMAIL`; never expose the service role key
 to the browser.
 
 ---

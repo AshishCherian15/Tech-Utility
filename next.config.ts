@@ -8,6 +8,21 @@ const supabaseWebSocketOrigin = supabaseOrigin.replace(/^https?:/, (scheme) =>
 );
 const isProduction = process.env.NODE_ENV === "production";
 
+// All AI provider endpoints used in /api/autofill/route.ts
+const aiProviderOrigins = [
+  "https://api.openai.com",
+  "https://api.groq.com",
+  "https://generativelanguage.googleapis.com",
+  "https://api.anthropic.com",
+  "https://openrouter.ai",
+  "https://api.deepseek.com",
+  "https://api.mistral.ai",
+  "https://api.together.xyz",
+  "https://api.fireworks.ai",
+  "https://api.x.ai",
+  "https://api.cerebras.ai",
+].join(" ");
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -18,36 +33,31 @@ const contentSecurityPolicy = [
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
   `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
-  `connect-src 'self' ${supabaseOrigin} ${supabaseWebSocketOrigin} https://api.groq.com https://generativelanguage.googleapis.com`,
+  `connect-src 'self' ${supabaseOrigin} ${supabaseWebSocketOrigin} ${aiProviderOrigins}`,
   ...(isProduction ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      // Supabase storage for entry images
       {
         protocol: "https",
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/**",
       },
-      // Google avatars (OAuth)
       {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
       },
-      // GitHub avatars
       {
         protocol: "https",
         hostname: "avatars.githubusercontent.com",
       },
     ],
   },
-  // Allow local development HMR
-  ...(process.env.NODE_ENV === "development" ? {
-    allowedDevOrigins: ["127.0.0.1", "localhost"],
-  } : {}),
-  // Security headers
+  ...(process.env.NODE_ENV === "development"
+    ? { allowedDevOrigins: ["127.0.0.1", "localhost"] }
+    : {}),
   async headers() {
     return [
       {
@@ -59,7 +69,12 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: contentSecurityPolicy },
           { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
           ...(isProduction
-            ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]
+            ? [
+                {
+                  key: "Strict-Transport-Security",
+                  value: "max-age=63072000; includeSubDomains",
+                },
+              ]
             : []),
           {
             key: "Permissions-Policy",
