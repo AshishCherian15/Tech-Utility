@@ -31,11 +31,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   if (supabaseUrl && supabaseAnonKey) {
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: entries } = await supabase
+
+    // Check if status column exists (backward compatibility)
+    let hasStatusColumn = false;
+    try {
+      const { error: statusCheckError } = await supabase
+        .from("entries")
+        .select("status")
+        .limit(1);
+      hasStatusColumn = !statusCheckError;
+    } catch {
+      hasStatusColumn = false;
+    }
+
+    let query = supabase
       .from("entries")
       .select("id, updated_at")
-      .eq("status", "PUBLISHED")
       .is("deleted_at", null);
+
+    if (hasStatusColumn) {
+      query = query.eq("status", "PUBLISHED");
+    }
+
+    const { data: entries } = await query;
 
     if (entries) {
       entries.forEach((entry) => {

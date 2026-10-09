@@ -10,13 +10,30 @@ interface PublicEntryPageProps {
 export async function generateMetadata({ params }: PublicEntryPageProps): Promise<Metadata> {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: entry } = await supabase
+
+  // Check if status column exists (backward compatibility)
+  let hasStatusColumn = false;
+  try {
+    const { error: statusCheckError } = await supabase
+      .from("entries")
+      .select("status")
+      .limit(1);
+    hasStatusColumn = !statusCheckError;
+  } catch {
+    hasStatusColumn = false;
+  }
+
+  let query = supabase
     .from("entries")
     .select("title, what_it_is, cover_image_url")
     .eq("id", id)
-    .eq("status", "PUBLISHED")
-    .is("deleted_at", null)
-    .maybeSingle();
+    .is("deleted_at", null);
+
+  if (hasStatusColumn) {
+    query = query.eq("status", "PUBLISHED");
+  }
+
+  const { data: entry } = await query.maybeSingle();
 
   if (!entry) {
     return {
@@ -39,7 +56,20 @@ export async function generateMetadata({ params }: PublicEntryPageProps): Promis
 export default async function PublicEntryPage({ params }: PublicEntryPageProps) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: entry } = await supabase
+
+  // Check if status column exists (backward compatibility)
+  let hasStatusColumn = false;
+  try {
+    const { error: statusCheckError } = await supabase
+      .from("entries")
+      .select("status")
+      .limit(1);
+    hasStatusColumn = !statusCheckError;
+  } catch {
+    hasStatusColumn = false;
+  }
+
+  let query = supabase
     .from("entries")
     .select(`
       *,
@@ -47,9 +77,13 @@ export default async function PublicEntryPage({ params }: PublicEntryPageProps) 
       links:entry_links(*)
     `)
     .eq("id", id)
-    .eq("status", "PUBLISHED")
-    .is("deleted_at", null)
-    .maybeSingle();
+    .is("deleted_at", null);
+
+  if (hasStatusColumn) {
+    query = query.eq("status", "PUBLISHED");
+  }
+
+  const { data: entry } = await query.maybeSingle();
 
   if (!entry) notFound();
 

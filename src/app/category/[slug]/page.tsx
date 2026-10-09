@@ -52,14 +52,32 @@ export default async function PublicCategoryPage({ params }: PublicCategoryPageP
 
   if (!category) notFound();
 
-  const { data: entries, error } = await supabase
+  // Check if status column exists (backward compatibility)
+  let hasStatusColumn = false;
+  try {
+    const { error: statusCheckError } = await supabase
+      .from("entries")
+      .select("status")
+      .limit(1);
+    hasStatusColumn = !statusCheckError;
+  } catch {
+    hasStatusColumn = false;
+  }
+
+  let query = supabase
     .from("entries")
     .select("*, category:categories(*), links:entry_links(*)")
-    .eq("status", "PUBLISHED")
     .eq("category_id", category.id)
-    .is("deleted_at", null)
-    .order("published_at", { ascending: false, nullsFirst: false })
+    .is("deleted_at", null);
+
+  if (hasStatusColumn) {
+    query = query.eq("status", "PUBLISHED");
+  }
+
+  query = query.order(hasStatusColumn ? "published_at" : "created_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
+
+  const { data: entries, error } = await query;
 
   if (error) throw error;
 

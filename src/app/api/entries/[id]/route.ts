@@ -29,7 +29,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).single();
+  // Check if status column exists (backward compatibility)
+  let hasStatusColumn = false;
+  try {
+    const { error: statusCheckError } = await supabase
+      .from("entries")
+      .select("status")
+      .limit(1);
+    hasStatusColumn = !statusCheckError;
+  } catch {
+    hasStatusColumn = false;
+  }
+
+  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
   const role = dbUser?.role || "CONTRIBUTOR";
   const isModOrAdmin = ["MODERATOR", "ADMIN"].includes(role);
 
@@ -78,17 +90,22 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
   }
 
-  let finalStatus = changes.status;
-  if (finalStatus === "PUBLISHED" && !["TRUSTED_CONTRIBUTOR", "MODERATOR", "ADMIN"].includes(role)) {
-    finalStatus = "PENDING";
-  }
-  if (finalStatus) {
-    changes.status = finalStatus;
+  // Only handle status if column exists
+  const updateData: Record<string, unknown> = { ...changes };
+  if (hasStatusColumn && changes.status !== undefined) {
+    let finalStatus = changes.status;
+    if (finalStatus === "PUBLISHED" && !["TRUSTED_CONTRIBUTOR", "MODERATOR", "ADMIN"].includes(role)) {
+      finalStatus = "PENDING";
+    }
+    updateData.status = finalStatus;
+  } else if (!hasStatusColumn) {
+    // Remove status from update data if column doesn't exist
+    delete updateData.status;
   }
 
   const { data, error } = await supabase
     .from("entries")
-    .update({ ...changes, updated_at: new Date().toISOString() })
+    .update({ ...updateData, updated_at: new Date().toISOString() })
     .eq("id", id)
     .select()
     .single();

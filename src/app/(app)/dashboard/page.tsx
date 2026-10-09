@@ -16,6 +16,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Check if status column exists (backward compatibility)
+  let hasStatusColumn = false;
+  try {
+    const { error: statusCheckError } = await supabase
+      .from("entries")
+      .select("status")
+      .limit(1);
+    hasStatusColumn = !statusCheckError;
+  } catch {
+    hasStatusColumn = false;
+  }
+
   let entriesQuery = supabase
     .from("entries")
     .select(`
@@ -25,14 +37,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .is("deleted_at", null)
     .order("pinned", { ascending: false });
 
-  if (user) {
-    entriesQuery = entriesQuery.or(`status.eq.PUBLISHED,user_id.eq.${user.id}`);
+  if (hasStatusColumn) {
+    // New public-library behavior
+    if (user) {
+      entriesQuery = entriesQuery.or(`status.eq.PUBLISHED,user_id.eq.${user.id}`);
+    } else {
+      entriesQuery = entriesQuery.eq("status", "PUBLISHED");
+    }
   } else {
-    entriesQuery = entriesQuery.eq("status", "PUBLISHED");
+    // Old private-library behavior - only show user's own entries
+    if (user) {
+      entriesQuery = entriesQuery.eq("user_id", user.id);
+    } else {
+      // Not signed in without status column - show nothing
+      entriesQuery = entriesQuery.eq("user_id", "00000000-0000-0000-0000-000000000000");
+    }
   }
 
   const { data: entries, count, error: entriesError } = await entriesQuery
-    .order("published_at", { ascending: false, nullsFirst: false })
+    .order(hasStatusColumn ? "published_at" : "created_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .order("id", { ascending: true })
     .range(0, 99);

@@ -40,6 +40,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid pagination parameters" }, { status: 400 });
   }
 
+  // Check if status column exists (backward compatibility)
+  let hasStatusColumn = false;
+  try {
+    const { error: statusCheckError } = await supabase
+      .from("entries")
+      .select("status")
+      .limit(1);
+    hasStatusColumn = !statusCheckError;
+  } catch {
+    hasStatusColumn = false;
+  }
+
   let query = supabase
     .from("entries")
     .select("*, category:categories(*), links:entry_links(*)", { count: "exact" })
@@ -51,10 +63,18 @@ export async function GET(request: Request) {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
   } else {
-    query = query
-      .or(`status.eq.PUBLISHED,user_id.eq.${user.id}`)
-      .order("published_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false });
+    if (hasStatusColumn) {
+      // New public-library behavior
+      query = query
+        .or(`status.eq.PUBLISHED,user_id.eq.${user.id}`)
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false });
+    } else {
+      // Old private-library behavior - show user's own entries
+      query = query
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+    }
   }
 
   query = query
@@ -87,7 +107,19 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).single();
+  // Check if status column exists (backward compatibility)
+  let hasStatusColumn = false;
+  try {
+    const { error: statusCheckError } = await supabase
+      .from("entries")
+      .select("status")
+      .limit(1);
+    hasStatusColumn = !statusCheckError;
+  } catch {
+    hasStatusColumn = false;
+  }
+
+  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
   const role = dbUser?.role || "CONTRIBUTOR";
 
   let body: unknown;
@@ -123,22 +155,27 @@ export async function POST(request: Request) {
     }
   }
 
-  // Enforce status based on role
-  let finalStatus = entry.status;
-  if (finalStatus === "PUBLISHED" && !["TRUSTED_CONTRIBUTOR", "MODERATOR", "ADMIN"].includes(role)) {
-    // Contributors must go through review
-    finalStatus = "PENDING";
+  // Prepare insert data
+  const insertData: Record<string, unknown> = {
+    user_id: user.id,
+    ...entry,
+    pinned: false,
+    favorited: false,
+  };
+
+  // Only add status if column exists
+  if (hasStatusColumn) {
+    let finalStatus = entry.status;
+    if (finalStatus === "PUBLISHED" && !["TRUSTED_CONTRIBUTOR", "MODERATOR", "ADMIN"].includes(role)) {
+      // Contributors must go through review
+      finalStatus = "PENDING";
+    }
+    insertData.status = finalStatus;
   }
 
   const { data, error } = await supabase
     .from("entries")
-    .insert({
-      user_id: user.id,
-      ...entry,
-      status: finalStatus,
-      pinned: false,
-      favorited: false,
-    })
+    .insert(insertData)
     .select()
     .single();
 

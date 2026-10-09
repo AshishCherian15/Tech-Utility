@@ -24,13 +24,34 @@ export default async function ReviewQueuePage() {
     redirect("/dashboard");
   }
 
+  // Check if status column exists (backward compatibility)
+  let hasStatusColumn = false;
+  try {
+    const { error: statusCheckError } = await supabase
+      .from("entries")
+      .select("status")
+      .limit(1);
+    hasStatusColumn = !statusCheckError;
+  } catch {
+    hasStatusColumn = false;
+  }
+
   // Fetch pending entries
-  const { data: pendingEntries, error } = await supabase
+  let query = supabase
     .from("entries")
     .select(`*, category:categories(*)`)
-    .eq("status", "PENDING")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+    .is("deleted_at", null);
+
+  if (hasStatusColumn) {
+    query = query.eq("status", "PENDING");
+  } else {
+    // Without status column, no review queue - return empty
+    query = query.eq("user_id", "00000000-0000-0000-0000-000000000000");
+  }
+
+  query = query.order("created_at", { ascending: false });
+
+  const { data: pendingEntries, error } = await query;
 
   if (error) {
     console.error("Failed to load review queue:", error.message);
