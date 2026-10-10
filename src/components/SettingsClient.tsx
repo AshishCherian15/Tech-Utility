@@ -913,112 +913,298 @@ const AI_PROVIDERS: Array<{ value: AIProvider; label: string }> = [
 function AISettingsPanel() {
   const { config, updateConfig, clearApiKey } = useAIConfig();
   const [showKey, setShowKey] = useState(false);
-  const { success } = useToast();
+  const [showConfigForm, setShowConfigForm] = useState(false);
+  const { success, error: toastError } = useToast();
+
+  // Store configured models in memory (similar to user accounts)
+  const [configuredModels, setConfiguredModels] = useState<Array<{
+    id: string;
+    provider: AIProvider;
+    model: string;
+    apiKey: string;
+    enabled: boolean;
+    isDefault: boolean;
+  }>>([]);
+
+  const isConfigured = config.apiKey.length > 0;
+  const activeProviderLabel = AI_PROVIDERS.find(p => p.value === config.provider)?.label || config.provider;
+  const activeModel = config.model || (config.provider === "gemini" ? "gemini-2.0-flash (default)" : "Not specified");
+
+  const handleSaveConfiguration = () => {
+    if (!config.apiKey) {
+      toastError("Please enter an API key before saving");
+      return;
+    }
+
+    const newConfig = {
+      id: Date.now().toString(),
+      provider: config.provider,
+      model: config.model || "default",
+      apiKey: config.apiKey,
+      enabled: true,
+      isDefault: configuredModels.length === 0,
+    };
+
+    setConfiguredModels([...configuredModels, newConfig]);
+    setShowConfigForm(false);
+    success("AI model configuration saved");
+  };
+
+  const handleSetActive = (id: string) => {
+    const model = configuredModels.find(m => m.id === id);
+    if (model) {
+      updateConfig({ provider: model.provider, model: model.model, apiKey: model.apiKey });
+      setConfiguredModels(configuredModels.map(m => ({ ...m, isDefault: m.id === id })));
+      success(`Switched to ${model.provider}: ${model.model}`);
+    }
+  };
+
+  const handleToggleEnabled = (id: string) => {
+    setConfiguredModels(configuredModels.map(m => {
+      if (m.id === id) {
+        const newState = !m.enabled;
+        if (!newState && m.isDefault) {
+          toastError("Cannot disable the active model. Set another model as active first.");
+          return m;
+        }
+        return { ...m, enabled: newState };
+      }
+      return m;
+    }));
+  };
+
+  const handleDelete = (id: string) => {
+    const model = configuredModels.find(m => m.id === id);
+    if (model?.isDefault) {
+      toastError("Cannot delete the active model. Set another model as active first.");
+      return;
+    }
+    setConfiguredModels(configuredModels.filter(m => m.id !== id));
+    success("Model configuration removed");
+  };
 
   return (
     <div className="settings-section">
       <div className="settings-section-title">AI Autofill &amp; Model Settings</div>
-      <div className="settings-card">
-        <div className="settings-row-title" style={{ marginBottom: 4 }}>Configure your AI provider</div>
-        <div className="settings-row-desc" style={{ marginBottom: 16 }}>
-          Your key is held in memory for this tab and sent only to this app&apos;s authenticated autofill endpoint, which forwards it to the selected provider. It is not saved in browser storage; reloads and sign-outs clear it. Source text is sent to your provider when you request a draft.
-        </div>
-        <div style={{ display: "grid", gap: 14 }}>
-          <div>
-            <label htmlFor="ai-provider" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>Provider</label>
-            <select
-              id="ai-provider"
-              className="input"
-              value={config.provider}
-              onChange={(event) => {
-                const provider = AI_PROVIDERS.find((option) => option.value === event.target.value);
-                if (provider) updateConfig({ provider: provider.value });
-              }}
-              style={{ width: "100%", minHeight: 44 }}
-            >
-              {AI_PROVIDERS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-            </select>
-            {config.provider === "auto" && (
-              <p className="settings-row-desc" style={{ marginTop: 6 }}>
-                Auto-detection uses recognizable key prefixes. If your provider uses a generic key format, choose it from the list instead.
-              </p>
-            )}
-          </div>
 
-          <div>
-            <label htmlFor="ai-api-key" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>API key</label>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                id="ai-api-key"
-                type={showKey ? "text" : "password"}
-                autoComplete="off"
-                spellCheck={false}
-                value={config.apiKey}
-                onChange={(event) => updateConfig({ apiKey: event.target.value })}
-                placeholder="Paste your provider API key"
+      {/* Current Status */}
+      <div className="settings-card" style={{ marginBottom: 16 }}>
+        <div className="settings-row-title" style={{ marginBottom: 4 }}>Current AI Configuration</div>
+        <div className="settings-row-desc" style={{ marginBottom: 12 }}>
+          {isConfigured ? (
+            <span style={{ color: "#22c55e" }}>
+              ✓ Active: <strong>{activeProviderLabel}</strong> using <strong>{activeModel}</strong>
+            </span>
+          ) : (
+            <span style={{ color: "#f59e0b" }}>
+              ⚠ No AI model configured. Add a configuration below to enable AI autofill.
+            </span>
+          )}
+        </div>
+        <div className="settings-row-desc" style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          API keys are held in memory for this tab only. Reloads and sign-outs clear them. Source text is sent to your provider when you request a draft.
+        </div>
+      </div>
+
+      {/* Configured Models List */}
+      {configuredModels.length > 0 && (
+        <div className="settings-card" style={{ marginBottom: 16 }}>
+          <div className="settings-row-title" style={{ marginBottom: 12 }}>Configured AI Models</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {configuredModels.map((model) => {
+              const providerLabel = AI_PROVIDERS.find(p => p.value === model.provider)?.label || model.provider;
+              return (
+                <div
+                  key={model.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: 12,
+                    background: model.isDefault ? "rgba(59,130,246,0.08)" : "var(--bg-base)",
+                    border: model.isDefault ? "1px solid rgba(59,130,246,0.3)" : "1px solid var(--border-subtle)",
+                    borderRadius: 8,
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{providerLabel}</span>
+                      {model.isDefault && (
+                        <span style={{
+                          fontSize: 10,
+                          padding: "2px 6px",
+                          background: "#3b82f6",
+                          color: "white",
+                          borderRadius: 4,
+                          fontWeight: 600
+                        }}>ACTIVE</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      Model: {model.model}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => handleToggleEnabled(model.id)}
+                    aria-pressed={model.enabled}
+                    style={{
+                      background: model.enabled ? "rgba(34,197,94,0.1)" : "rgba(156,163,175,0.1)",
+                      color: model.enabled ? "#22c55e" : "#9ca3af",
+                      border: model.enabled ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(156,163,175,0.2)",
+                      padding: "6px 10px",
+                      fontSize: 12,
+                    }}
+                  >
+                    {model.enabled ? "Enabled" : "Disabled"}
+                  </button>
+                  {!model.isDefault && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      onClick={() => handleSetActive(model.id)}
+                      style={{ padding: "6px 10px", fontSize: 12 }}
+                    >
+                      Set Active
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger"
+                    onClick={() => handleDelete(model.id)}
+                    aria-label="Delete model configuration"
+                    style={{ padding: "6px 10px" }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Add New Configuration */}
+      <div className="settings-card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div className="settings-row-title">Add AI Model Configuration</div>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowConfigForm(!showConfigForm)}
+            style={{ padding: "8px 14px", fontSize: 13 }}
+          >
+            {showConfigForm ? "Cancel" : "+ Add Configuration"}
+          </button>
+        </div>
+
+        {showConfigForm && (
+          <div style={{ display: "grid", gap: 14 }}>
+            <div>
+              <label htmlFor="ai-provider" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>Provider</label>
+              <select
+                id="ai-provider"
                 className="input"
-                style={{ flex: 1, minWidth: 0 }}
-              />
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setShowKey((visible) => !visible)}
-                aria-label={showKey ? "Hide API key" : "Show API key"}
-                aria-pressed={showKey}
-                style={{ minHeight: 44 }}
+                value={config.provider}
+                onChange={(event) => {
+                  const provider = AI_PROVIDERS.find((option) => option.value === event.target.value);
+                  if (provider) updateConfig({ provider: provider.value });
+                }}
+                style={{ width: "100%", minHeight: 44 }}
               >
-                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-              {config.apiKey && (
+                {AI_PROVIDERS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              {config.provider === "auto" && (
+                <p className="settings-row-desc" style={{ marginTop: 6 }}>
+                  Auto-detection uses recognizable key prefixes. If your provider uses a generic key format, choose it from the list instead.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="ai-api-key" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>API key</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  id="ai-api-key"
+                  type={showKey ? "text" : "password"}
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={config.apiKey}
+                  onChange={(event) => updateConfig({ apiKey: event.target.value })}
+                  placeholder="Paste your provider API key"
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                />
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
-                  onClick={() => {
-                    clearApiKey();
-                    success("API key cleared from this tab.");
-                  }}
+                  onClick={() => setShowKey((visible) => !visible)}
+                  aria-label={showKey ? "Hide API key" : "Show API key"}
+                  aria-pressed={showKey}
                   style={{ minHeight: 44 }}
                 >
-                  Clear
+                  {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
-              )}
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label htmlFor="ai-model" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>Model</label>
-            <input
-              id="ai-model"
-              type="text"
-              value={config.model}
-              onChange={(event) => updateConfig({ model: event.target.value })}
-              placeholder={config.provider === "gemini" ? "gemini-2.0-flash (default)" : "Enter the model ID from your provider"}
-              maxLength={200}
-              className="input"
-              style={{ width: "100%" }}
-            />
-            <p className="settings-row-desc" style={{ marginTop: 6 }}>Enter an exact model ID enabled for your API key. Leave blank only to use the default Gemini model.</p>
-          </div>
-
-          {config.provider === "custom" && (
             <div>
-              <label htmlFor="ai-endpoint" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>OpenAI-compatible HTTPS endpoint</label>
+              <label htmlFor="ai-model" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>Model</label>
               <input
-                id="ai-endpoint"
-                type="url"
-                value={config.endpoint}
-                onChange={(event) => updateConfig({ endpoint: event.target.value })}
-                placeholder="https://api.example.com/v1"
-                maxLength={2_000}
+                id="ai-model"
+                type="text"
+                value={config.model}
+                onChange={(event) => updateConfig({ model: event.target.value })}
+                placeholder={config.provider === "gemini" ? "gemini-2.0-flash (default)" : "Enter the model ID from your provider"}
+                maxLength={200}
                 className="input"
                 style={{ width: "100%" }}
               />
-              <p className="settings-row-desc" style={{ marginTop: 6 }}>
-                Must resolve to a public HTTPS host; local/private addresses and redirects are blocked. The chat-completions path is added automatically.
-              </p>
+              <p className="settings-row-desc" style={{ marginTop: 6 }}>Enter an exact model ID enabled for your API key. Leave blank to use the provider&apos;s default model.</p>
             </div>
-          )}
-        </div>
+
+            {config.provider === "custom" && (
+              <div>
+                <label htmlFor="ai-endpoint" className="settings-row-title" style={{ display: "block", marginBottom: 6 }}>OpenAI-compatible HTTPS endpoint</label>
+                <input
+                  id="ai-endpoint"
+                  type="url"
+                  value={config.endpoint}
+                  onChange={(event) => updateConfig({ endpoint: event.target.value })}
+                  placeholder="https://api.example.com/v1"
+                  maxLength={2_000}
+                  className="input"
+                  style={{ width: "100%" }}
+                />
+                <p className="settings-row-desc" style={{ marginTop: 6 }}>
+                  Must resolve to a public HTTPS host; local/private addresses and redirects are blocked. The chat-completions path is added automatically.
+                </p>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSaveConfiguration}
+                style={{ flex: 1 }}
+              >
+                Save Configuration
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowConfigForm(false);
+                  clearApiKey();
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
