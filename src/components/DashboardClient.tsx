@@ -23,6 +23,7 @@ interface DashboardClientProps {
   emptyMessage?: string;
   initialCategoryId?: string;
   initialSort?: SortOption;
+  userId?: string | null;
 }
 
 const ENTRY_TYPES: EntryType[] = ["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"];
@@ -43,7 +44,7 @@ const TYPE_COLORS: Record<EntryType, string> = {
   Prompt: "badge-pink",
 };
 
-function GalleryCard({ entry, index }: { entry: Entry; index: number }) {
+function GalleryCard({ entry, index, userId }: { entry: Entry; index: number; userId?: string | null }) {
   const imageUrls = useImageUrls(entry.images ?? []);
 
   return (
@@ -64,7 +65,22 @@ function GalleryCard({ entry, index }: { entry: Entry; index: number }) {
       </div>
       <div className="gallery-card-info">
         <div className="gallery-card-title">{entry.title}</div>
-        <div className="gallery-card-meta">{entry.category?.name}</div>
+        <div className="gallery-card-meta">
+          {entry.category?.name}
+          {entry.status === "PENDING" && userId === entry.user_id && (
+            <span
+              className="badge"
+              style={{
+                backgroundColor: "rgba(245, 158, 11, 0.2)",
+                color: "#f59e0b",
+                fontSize: 10,
+                marginLeft: 6,
+              }}
+            >
+              Pending
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );
@@ -79,6 +95,7 @@ export default function DashboardClient({
   emptyMessage,
   initialCategoryId = "",
   initialSort = "newest",
+  userId,
 }: DashboardClientProps) {
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
   const [nextOffset, setNextOffset] = useState(initialEntries.length);
@@ -483,7 +500,7 @@ export default function DashboardClient({
                 className="animate-fade-in"
                 style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
               >
-                <EntryCard entry={entry} typeColorClass={TYPE_COLORS[entry.type]} />
+                <EntryCard entry={entry} typeColorClass={TYPE_COLORS[entry.type]} userId={userId} />
               </div>
             ))}
             {loadingMore && Array.from({ length: 6 }).map((_, i) => (
@@ -498,7 +515,7 @@ export default function DashboardClient({
                 className="animate-fade-in"
                 style={{ animationDelay: `${Math.min(i * 20, 200)}ms` }}
               >
-                <EntryListItem entry={entry} typeColorClass={TYPE_COLORS[entry.type]} />
+                <EntryListItem entry={entry} typeColorClass={TYPE_COLORS[entry.type]} userId={userId} />
               </div>
             ))}
             {loadingMore && Array.from({ length: 6 }).map((_, i) => (
@@ -568,6 +585,19 @@ export default function DashboardClient({
                       <Link href={`/entries/${entry.id}`} className="entry-table-title">
                         {entry.pinned && <Pin size={11} style={{ color: "var(--brand-blue-bright)" }} />}
                         {entry.title}
+                        {entry.status === "PENDING" && userId === entry.user_id && (
+                          <span
+                            className="badge"
+                            style={{
+                              backgroundColor: "rgba(245, 158, 11, 0.2)",
+                              color: "#f59e0b",
+                              fontSize: 10,
+                              marginLeft: 6,
+                            }}
+                          >
+                            Pending
+                          </span>
+                        )}
                       </Link>
                     </td>
                     <td><span className={`badge ${TYPE_COLORS[entry.type]}`}>{entry.type}</span></td>
@@ -690,7 +720,7 @@ export default function DashboardClient({
                 className="masonry-item animate-fade-in"
                 style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
               >
-                <EntryCard entry={entry} typeColorClass={TYPE_COLORS[entry.type]} />
+                <EntryCard entry={entry} typeColorClass={TYPE_COLORS[entry.type]} userId={userId} />
               </div>
             ))}
             {loadingMore && Array.from({ length: 6 }).map((_, i) => (
@@ -703,7 +733,7 @@ export default function DashboardClient({
           /* Gallery view */
           <div className="gallery-grid">
             {filtered.map((entry, i) => (
-              <GalleryCard key={entry.id} entry={entry} index={i} />
+              <GalleryCard key={entry.id} entry={entry} index={i} userId={userId} />
             ))}
             {loadingMore && Array.from({ length: 6 }).map((_, i) => (
               <div key={`skeleton-${i}`} className="gallery-item">

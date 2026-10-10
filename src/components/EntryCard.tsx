@@ -12,12 +12,7 @@ interface EntryCardProps {
   entry: Entry;
   typeColorClass: string;
   hrefPrefix?: "/entries" | "/entry";
-}
-
-interface EntryCardProps {
-  entry: Entry;
-  typeColorClass: string;
-  hrefPrefix?: "/entries" | "/entry";
+  userId?: string | null;
 }
 
 const CARD_COLORS: Record<string, string> = {
@@ -37,7 +32,7 @@ const PRICING_COLORS: Record<string, string> = {
   paid: "#ef4444",
 };
 
-export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entries" }: EntryCardProps) {
+export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entries", userId }: EntryCardProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [favorited, setFavorited] = useState(entry.favorited);
@@ -157,6 +152,18 @@ export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entrie
               }}
             >
               {entry.pricing.charAt(0).toUpperCase() + entry.pricing.slice(1)}
+            </span>
+          )}
+          {entry.status === "PENDING" && userId === entry.user_id && (
+            <span
+              className="badge"
+              style={{
+                backgroundColor: "rgba(245, 158, 11, 0.2)",
+                color: "#f59e0b",
+                fontSize: 11,
+              }}
+            >
+              Pending Review
             </span>
           )}
         </div>

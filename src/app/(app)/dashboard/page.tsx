@@ -76,6 +76,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       categories={categories ?? []}
       initialCategoryId={params.category ?? ""}
       initialSort={params.sort === "recently_edited" ? "recently_edited" : "newest"}
+      userId={user?.id ?? null}
     />
   );
 }

@@ -9,9 +9,10 @@ import { formatRelativeDate, truncate } from "@/lib/utils";
 interface EntryListItemProps {
   entry: Entry;
   typeColorClass: string;
+  userId?: string | null;
 }
 
-export default function EntryListItem({ entry, typeColorClass }: EntryListItemProps) {
+export default function EntryListItem({ entry, typeColorClass, userId }: EntryListItemProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e: React.MouseEvent) => {
@@ -28,6 +29,19 @@ export default function EntryListItem({ entry, typeColorClass }: EntryListItemPr
     <Link href={`/entries/${entry.id}`} className="list-item">
       <div className="list-item-left">
         <span className={`badge ${typeColorClass}`}>{entry.type}</span>
+        {entry.status === "PENDING" && userId === entry.user_id && (
+          <span
+            className="badge"
+            style={{
+              backgroundColor: "rgba(245, 158, 11, 0.2)",
+              color: "#f59e0b",
+              fontSize: 10,
+              marginLeft: 6,
+            }}
+          >
+            Pending
+          </span>
+        )}
       </div>
 
       <div className="list-item-body">
