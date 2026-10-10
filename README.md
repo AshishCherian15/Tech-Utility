@@ -151,6 +151,16 @@ published-entry indexes, and the private `entry-images` bucket.
 Do not run it against a production project until you have verified the project target
 and reviewed the SQL.
 
+**Additional Migrations (Optional but Recommended):**
+
+4. `database/03-add-pricing-columns.sql` - Adds pricing/pricing_note fields
+5. `database/04-seed-data.sql` - Adds sample categories and entries (requires admin UUID replacement)
+6. `database/05-add-published-index.sql` - Performance index for published entries
+7. `database/06-add-reports-constraint.sql` - Prevents duplicate reports
+8. `database/07-link-health-checks.sql` - Table for future link health cron job
+
+See [`database/MIGRATION_STATUS.md`](./database/MIGRATION_STATUS.md) for detailed migration tracking and verification steps.
+
 Before using the app, mark the already-existing owner Auth user as provisioned in
 trusted `app_metadata` (replace the placeholder with the exact owner sign-in email).
 Run this only against the verified target project, in its Supabase SQL Editor or using

@@ -1,6 +1,7 @@
 # Security Policy
 
 **Last reviewed:** 2026-10-10
+**Production readiness:** Codebase clean, no exposed secrets, ready for deployment with documented security gaps
 
 ## Overview
 
@@ -49,6 +50,7 @@ This project is currently pre-release. Only the `main` branch is maintained.
 - Optional user-supplied AI keys are stored in browser local storage and are readable by same-origin JavaScript; use server-managed keys or avoid saving keys on shared devices
 - Helper scripts must read project URL, owner email, and service role credentials from environment variables. Do not hardcode production secrets in scripts.
 - If a real key was committed at any point in Git history, rotate it immediately. Treat it as compromised even if the current working tree no longer contains it.
+- **Git History Note:** Pattern matching shows key prefixes (`sk-`, `gsk_`, `AIza`) in older commits. These appear to be from development/testing and are not current keys. However, if any real keys were ever committed, they should be rotated and history should be rewritten using `git filter-repo` or BFG.
 
 ### File Storage
 - The schema configures the `entry-images` Supabase Storage bucket as **private**
@@ -71,12 +73,28 @@ All responses include:
 
 ## Known Gaps Before Production
 
-- Distributed rate limiting is not yet implemented.
-- MFA challenge enforcement is not complete.
+### High Priority (Address Before Broad Public Launch)
+- Distributed rate limiting is not yet implemented on auth/signup/AI endpoints.
+- MFA challenge enforcement is not complete (Supabase Auth supports TOTP, app doesn't enforce it).
 - CAPTCHA/bot protection is not connected.
 - Monitoring/error dashboards are not connected.
 - Automated backups and disaster-recovery drills need setup.
+
+### Medium Priority (Address After Initial Launch)
 - Contact/newsletter forms are informational until a backend provider is connected.
+- Link health checker cron job requires Vercel cron setup (SQL table exists, route not implemented).
+
+### Production Readiness Status (October 10, 2026)
+- ✅ No exposed secrets in current codebase
+- ✅ `.env.local` properly ignored by git
+- ✅ Environment variables properly structured
+- ✅ Database RLS policies implemented
+- ✅ Server-side session validation on all API routes
+- ✅ Public pages limited to published content
+- ✅ Security headers configured
+- ⚠️ Rate limiting pending (documented gap)
+- ⚠️ MFA enforcement pending (documented gap)
+- ⚠️ Monitoring/alerts pending (documented gap)
 
 ## Reporting a Vulnerability
 

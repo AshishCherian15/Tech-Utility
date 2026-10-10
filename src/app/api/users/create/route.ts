@@ -98,7 +98,6 @@ export async function POST(request: Request) {
     }
 
     // Always set the password after creation to ensure it works
-    console.log("Setting password for created user...");
     const { error: passwordError } = await admin.auth.admin.updateUserById(data.user.id, {
       password: account.password,
       email_confirm: true,
