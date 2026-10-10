@@ -54,8 +54,8 @@ export const publicPages: Record<string, PublicPageContent> = {
         bullets: [
           "Support email: support@byteshelf.app",
           "Security email: security@byteshelf.app",
-          "Phone: Add a verified business phone before publishing this page.",
-          "Social links: Add official profiles only after they are active.",
+          "Business phone: Contact information will be added when a business line is established.",
+          "Social media: Official profiles will be linked when they are launched.",
         ],
       },
       {
@@ -80,7 +80,7 @@ export const publicPages: Record<string, PublicPageContent> = {
       },
       {
         title: "Optional Processing",
-        body: ["Optional analytics, marketing emails, and third-party widgets should remain disabled until a clear consent flow is enabled."],
+        body: ["Analytics, marketing emails, and third-party widgets are not currently enabled. When these features are added, we will provide clear consent options and controls."],
         bullets: [
           "You may decline non-essential cookies.",
           "You may request deletion through account settings.",
@@ -104,7 +104,7 @@ export const publicPages: Record<string, PublicPageContent> = {
       {
         title: "Future Paid Plans",
         body: [
-          "If paid services are introduced, pricing, billing terms, cancellation rules, and refund windows must be published before checkout is enabled.",
+          "When paid services are introduced, this page will include pricing, billing terms, cancellation rules, and refund windows before checkout is enabled.",
         ],
       },
     ],
@@ -127,7 +127,7 @@ export const publicPages: Record<string, PublicPageContent> = {
       {
         title: "Review and Moderation",
         body: [
-          "Contributor submissions may remain pending until a moderator approves them. Rejected entries should include a reason when that workflow is fully enabled.",
+          "Contributor submissions may remain pending until a moderator approves them. Rejected entries include a reason explaining the decision.",
         ],
       },
     ],
@@ -156,12 +156,12 @@ export const publicPages: Record<string, PublicPageContent> = {
     slug: "promotions",
     title: "Giveaways and Promotions",
     eyebrow: "Community",
-    description: "A placeholder for official ByteShelf promotions, giveaways, and community events.",
+    description: "Official ByteShelf promotions, giveaways, and community events.",
     sections: [
       {
         title: "No Active Promotions",
         body: [
-          "ByteShelf is not running a giveaway or promotion right now. Any future promotion should include eligibility, timing, prize details, selection process, and privacy terms.",
+          "ByteShelf is not running a giveaway or promotion at this time. Check back later for community events and special features.",
         ],
       },
     ],
@@ -239,7 +239,7 @@ export const publicPages: Record<string, PublicPageContent> = {
       },
       {
         title: "Future Billing",
-        body: ["If paid plans are added, this page should be updated before checkout is enabled."],
+        body: ["When paid plans are introduced, this page will include pricing tiers, billing cycles, cancellation policies, and refund windows."],
       },
     ],
   },
