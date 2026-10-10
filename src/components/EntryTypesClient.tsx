@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Edit2, Trash2, Save, X, Terminal, Monitor, Globe, Puzzle, Code, Workflow, Book, Wrench, Tag } from "lucide-react";
+import { Plus, Edit2, Trash2, Save, X, Terminal, Monitor, Globe, Puzzle, Code, Workflow, Book, Wrench, Tag, AlertTriangle } from "lucide-react";
 import type { EntryTypeConfig } from "@/lib/types";
 import { useToast } from "@/components/Toast";
 
@@ -45,11 +45,17 @@ export default function EntryTypesClient({ entryTypes: initialEntryTypes }: Entr
     sort_order: entryTypes.length + 1,
   });
   const [showNewForm, setShowNewForm] = useState(false);
+  const [isFallbackMode] = useState(initialEntryTypes.some(t => t.id.startsWith('default-')));
   const { success, error: showError } = useToast();
 
   const supabase = createClient();
 
   const handleSave = async (id: string, updates: Partial<EntryTypeConfig>) => {
+    if (isFallbackMode) {
+      showError("Cannot edit types in fallback mode. Run the database migration first.");
+      return;
+    }
+
     const { error: dbError } = await supabase
       .from("entry_types")
       .update(updates)
@@ -66,6 +72,11 @@ export default function EntryTypesClient({ entryTypes: initialEntryTypes }: Entr
   };
 
   const handleDelete = async (id: string) => {
+    if (isFallbackMode) {
+      showError("Cannot delete types in fallback mode. Run the database migration first.");
+      return;
+    }
+
     if (!confirm("Are you sure you want to delete this entry type? This action cannot be undone.")) {
       return;
     }
@@ -85,6 +96,11 @@ export default function EntryTypesClient({ entryTypes: initialEntryTypes }: Entr
   };
 
   const handleCreate = async () => {
+    if (isFallbackMode) {
+      showError("Cannot create types in fallback mode. Run the database migration first.");
+      return;
+    }
+
     if (!newType.name || !newType.icon || !newType.color) {
       showError("Name, icon, and color are required");
       return;
@@ -134,15 +150,34 @@ export default function EntryTypesClient({ entryTypes: initialEntryTypes }: Entr
           <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Entry Types</h1>
           <p style={{ color: "var(--text-muted)" }}>Manage the types of entries that can be created in ByteShelf</p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setShowNewForm(!showNewForm)}
-        >
-          <Plus size={16} />
-          {showNewForm ? "Cancel" : "New Type"}
-        </button>
+        {!isFallbackMode && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowNewForm(!showNewForm)}
+          >
+            <Plus size={16} />
+            {showNewForm ? "Cancel" : "New Type"}
+          </button>
+        )}
       </div>
+
+      {isFallbackMode && (
+        <div className="settings-card" style={{ marginBottom: 24, padding: 20, background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <AlertTriangle size={20} style={{ color: "#f59e0b", flexShrink: 0 }} />
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: "#f59e0b" }}>Database Migration Required</h3>
+              <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 12 }}>
+                The entry_types table does not exist in your database. You are currently viewing default fallback types.
+              </p>
+              <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 0 }}>
+                To enable full type management, run <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontFamily: "monospace" }}>database/08-add-entry-types-table.sql</code> in your Supabase SQL Editor. Don&apos;t forget to refresh the PostgREST schema with <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontFamily: "monospace" }}>NOTIFY pgrst, &apos;reload schema&apos;;</code>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showNewForm && (
         <div className="settings-card" style={{ marginBottom: 24, padding: 24 }}>
@@ -255,9 +290,21 @@ export default function EntryTypesClient({ entryTypes: initialEntryTypes }: Entr
                         type="text"
                         className="input"
                         defaultValue={entryType.name}
-                        onBlur={(e) => handleSave(entryType.id, { name: e.target.value })}
+                        onBlur={(e) => {
+                          if (isFallbackMode) {
+                            showError("Cannot edit types in fallback mode. Run the database migration first.");
+                            setEditingId(null);
+                            return;
+                          }
+                          handleSave(entryType.id, { name: e.currentTarget.value });
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
+                            if (isFallbackMode) {
+                              showError("Cannot edit types in fallback mode. Run the database migration first.");
+                              setEditingId(null);
+                              return;
+                            }
                             handleSave(entryType.id, { name: e.currentTarget.value });
                           }
                         }}
@@ -344,14 +391,16 @@ export default function EntryTypesClient({ entryTypes: initialEntryTypes }: Entr
                       >
                         {isEditing ? <X size={14} /> : <Edit2 size={14} />}
                       </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger"
-                        onClick={() => handleDelete(entryType.id)}
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {!isFallbackMode && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDelete(entryType.id)}
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

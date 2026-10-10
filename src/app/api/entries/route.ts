@@ -7,7 +7,7 @@ const entryListQuerySchema = z.object({
   scope: z.enum(["library", "mine"]).optional().default("library"),
   q: z.string().max(200).optional(),
   category_id: z.string().uuid().optional(),
-  type: z.enum(["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"]).optional(),
+  type: z.string().max(50).optional(), // Database-driven, not hardcoded enum
   difficulty: z.enum(["Easy", "Medium", "Hard"]).optional(),
   platform: z.enum(["Windows", "Android", "iOS", "macOS", "Linux", "Web", "Cross-platform"]).optional(),
   pricing: z.enum(["free", "freemium", "paid"]).optional(),
@@ -50,6 +50,7 @@ export async function GET(request: Request) {
       .limit(1);
     hasStatusColumn = !statusCheckError;
   } catch {
+    // If table doesn't exist or other error, assume no status column
     hasStatusColumn = false;
   }
 
@@ -118,11 +119,19 @@ export async function POST(request: Request) {
       .limit(1);
     hasStatusColumn = !statusCheckError;
   } catch {
+    // If table doesn't exist or other error, assume no status column
     hasStatusColumn = false;
   }
 
-  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
-  const role = dbUser?.role || "CONTRIBUTOR";
+  // Get user role (fallback if users table doesn't exist)
+  let role = "CONTRIBUTOR";
+  try {
+    const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
+    role = dbUser?.role || "CONTRIBUTOR";
+  } catch {
+    // users table might not exist, use default role
+    role = "CONTRIBUTOR";
+  }
 
   let body: unknown;
   try {
@@ -143,17 +152,22 @@ export async function POST(request: Request) {
   if (entry.category_id) {
     // Categories are shared in the public-library model, so an authenticated
     // contributor may attach an entry to any existing category.
-    const { data: category, error: categoryError } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("id", entry.category_id)
-      .maybeSingle();
-    if (categoryError) {
-      console.error("Entry category validation failed:", categoryError.message);
+    try {
+      const { data: category, error: categoryError } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("id", entry.category_id)
+        .maybeSingle();
+      if (categoryError) {
+        console.error("Entry category validation failed:", categoryError.message);
+        return NextResponse.json({ error: "Could not validate the selected category" }, { status: 500 });
+      }
+      if (!category) {
+        return NextResponse.json({ error: "Selected category was not found" }, { status: 400 });
+      }
+    } catch (e) {
+      console.error("Category lookup failed:", e instanceof Error ? e.message : 'Unknown error');
       return NextResponse.json({ error: "Could not validate the selected category" }, { status: 500 });
-    }
-    if (!category) {
-      return NextResponse.json({ error: "Selected category was not found" }, { status: 400 });
     }
   }
 
@@ -183,7 +197,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Entry creation failed:", error.message);
-    return NextResponse.json({ error: "Could not create entry" }, { status: 500 });
+    return NextResponse.json({ error: "Could not create entry", details: error.message }, { status: 500 });
   }
 
   return NextResponse.json(data, { status: 201 });
