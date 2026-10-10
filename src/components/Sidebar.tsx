@@ -14,6 +14,7 @@ import {
   Clock,
   Users,
   ClipboardCheck,
+  Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -81,7 +82,10 @@ export default function Sidebar({ user, isOwner, userRole }: SidebarProps) {
       ? [{ href: "/review-queue", icon: ClipboardCheck, label: "Review Queue" }]
       : []),
     ...(isOwner
-      ? [{ href: "/users", icon: Users, label: "User accounts" }]
+      ? [
+          { href: "/entry-types", icon: Tag, label: "Entry Types" },
+          { href: "/users", icon: Users, label: "User accounts" },
+        ]
       : []),
     ...(user ? [baseNavItems[3]] : []), // Settings
   ];

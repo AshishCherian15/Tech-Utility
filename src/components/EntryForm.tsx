@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Link2, Sparkles, Plus, X, Upload, Loader2 } from "lucide-react";
 import BackLink from "@/components/BackLink";
-import type { Category, Entry, EntryType, DifficultyLevel, Platform } from "@/lib/types";
+import type { Category, Entry, EntryType, DifficultyLevel, Platform, EntryTypeConfig } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
 import { useImageUrls } from "@/lib/use-image-urls";
 import { useAIConfig } from "@/components/AIConfigProvider";
 
-const ENTRY_TYPES: EntryType[] = ["Tip","Trick","Hack","App","Website","Tool","Extension","Command","Guide","Prompt"];
 const DIFFICULTY_LEVELS: DifficultyLevel[] = ["Easy", "Medium", "Hard"];
 const PLATFORMS: Platform[] = ["Windows","Android","iOS","macOS","Linux","Web","Cross-platform"];
 const PRICING_TIERS = ["free", "freemium", "paid"] as const;
@@ -82,6 +81,24 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
   const [showLinkPanel, setShowLinkPanel] = useState(false);
   const [linkPreviewUrl, setLinkPreviewUrl] = useState("");
   const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
+  const [entryTypes, setEntryTypes] = useState<EntryTypeConfig[]>([]);
+
+  // Fetch entry types from database
+  useEffect(() => {
+    async function fetchEntryTypes() {
+      try {
+        const res = await fetch("/api/entry-types");
+        if (res.ok) {
+          const data = await res.json();
+          setEntryTypes(data);
+        }
+      } catch {
+        // Fallback to empty array on error
+        setEntryTypes([]);
+      }
+    }
+    fetchEntryTypes();
+  }, []);
 
   // Form state
   const sharedDetails = [
@@ -91,7 +108,7 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
   const [form, setForm] = useState({
     title: entry?.title ?? sharedContent?.title ?? "",
     category_id: entry?.category_id ?? "",
-    type: entry?.type ?? initialType ?? "Tip",
+    type: entry?.type ?? initialType ?? "command",
     tags: entry?.tags ?? [] as string[],
     what_it_is: entry?.what_it_is ?? sharedDetails,
     why_useful: entry?.why_useful ?? "",
@@ -512,7 +529,7 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
                 value={form.type}
                 onChange={e => set("type", e.target.value)}
               >
-                {ENTRY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                {entryTypes.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
               </select>
             </div>
           </div>

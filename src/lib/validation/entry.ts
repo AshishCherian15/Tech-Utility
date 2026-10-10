@@ -4,7 +4,7 @@ import { readJsonBody } from "@/lib/validation/json";
 const entryFields = {
   title: z.string().trim().min(1).max(500),
   category_id: z.string().uuid().nullable(),
-  type: z.enum(["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"]),
+  type: z.string().min(1).max(50), // Now database-driven, accepts any valid type name
   tags: z.array(z.string().max(100)).max(100),
   what_it_is: z.string().max(10000).nullable(),
   why_useful: z.string().max(10000).nullable(),
@@ -28,7 +28,7 @@ export const createEntrySchema = z.object({
   ...entryFields,
   title: entryFields.title,
   category_id: entryFields.category_id.optional().default(null),
-  type: entryFields.type.optional().default("Tip"),
+  type: entryFields.type.optional().default("command"), // Default to first seeded type
   tags: entryFields.tags.optional().default([]),
   what_it_is: entryFields.what_it_is.optional().default(null),
   why_useful: entryFields.why_useful.optional().default(null),

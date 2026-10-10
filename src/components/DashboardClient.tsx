@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
   Search, Plus, Grid3X3, List, Table, Image as ImageIcon, LayoutGrid,
   Pin, SlidersHorizontal, X, Lightbulb, Terminal, Wrench, BookOpen
 } from "lucide-react";
-import type { Entry, Category, ViewMode, SortOption, EntryType, DifficultyLevel, Platform, PricingTier } from "@/lib/types";
+import type { Entry, Category, ViewMode, SortOption, EntryType, DifficultyLevel, Platform, PricingTier, EntryTypeConfig } from "@/lib/types";
 import EntryCard from "@/components/EntryCard";
 import EntryCardSkeleton from "@/components/EntryCardSkeleton";
 import EntryListItem from "@/components/EntryListItem";
@@ -26,22 +26,24 @@ interface DashboardClientProps {
   userId?: string | null;
 }
 
-const ENTRY_TYPES: EntryType[] = ["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"];
+
 const DIFFICULTY_LEVELS: DifficultyLevel[] = ["Easy", "Medium", "Hard"];
-const PLATFORMS: Platform[] = ["Windows", "Android", "iOS", "macOS", "Linux", "Web", "Cross-platform"];
+const PLATFORMS: Platform[] = ["Windows","Android","iOS","macOS","Linux","Web","Cross-platform"];
 const PRICING_TIERS: PricingTier[] = ["free", "freemium", "paid"];
 
-const TYPE_COLORS: Record<EntryType, string> = {
-  Tip: "badge-blue",
-  Trick: "badge-purple",
-  Hack: "badge-orange",
-  App: "badge-green",
-  Website: "badge-cyan",
-  Tool: "badge-cyan",
-  Extension: "badge-purple",
-  Command: "badge-orange",
-  Guide: "badge-blue",
-  Prompt: "badge-pink",
+// Fallback color mapping for type names
+const getTypeColorClass = (typeName: string): string => {
+  const colorMap: Record<string, string> = {
+    command: "badge-orange",
+    app: "badge-green",
+    website: "badge-cyan",
+    extension: "badge-purple",
+    library: "badge-blue",
+    workflow: "badge-cyan",
+    guide: "badge-blue",
+    tool: "badge-gray",
+  };
+  return colorMap[typeName.toLowerCase()] || "badge-blue";
 };
 
 function GalleryCard({ entry, index, userId }: { entry: Entry; index: number; userId?: string | null }) {
@@ -59,7 +61,7 @@ function GalleryCard({ entry, index, userId }: { entry: Entry; index: number; us
           <img src={imageUrls[0]} alt={entry.title} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           <div className="gallery-card-placeholder">
-            <span className={`badge ${TYPE_COLORS[entry.type]}`}>{entry.type}</span>
+            <span className={`badge ${getTypeColorClass(entry.type)}`}>{entry.type}</span>
           </div>
         )}
       </div>
@@ -110,7 +112,25 @@ export default function DashboardClient({
   const [filterPlatform, setFilterPlatform] = useState<Platform | "">("");
   const [filterPricing, setFilterPricing] = useState<PricingTier | "">("");
   const [showFilters, setShowFilters] = useState(false);
+  const [entryTypes, setEntryTypes] = useState<EntryTypeConfig[]>([]);
   const { error: toastError } = useToast();
+
+  // Fetch entry types from database
+  useEffect(() => {
+    async function fetchEntryTypes() {
+      try {
+        const res = await fetch("/api/entry-types");
+        if (res.ok) {
+          const data = await res.json();
+          setEntryTypes(data);
+        }
+      } catch {
+        // Fallback to empty array on error
+        setEntryTypes([]);
+      }
+    }
+    fetchEntryTypes();
+  }, []);
 
   const activeFilterCount = [filterCategory, filterType, filterDifficulty, filterPlatform, filterPricing].filter(Boolean).length;
   const hasQuery = search.trim().length > 0;
@@ -375,15 +395,15 @@ export default function DashboardClient({
           <div className="filters-group">
             <span className="filters-label" id="filter-type-label">Type</span>
             <div className="filters-chips" role="group" aria-labelledby="filter-type-label">
-              {ENTRY_TYPES.map(t => (
+              {entryTypes.map(t => (
                 <button
-                  key={t}
+                  key={t.id}
                   type="button"
-                  className={cn("filter-chip", filterType === t && "filter-chip-active")}
-                  onClick={() => setFilterType(filterType === t ? "" : t)}
-                  aria-pressed={filterType === t}
+                  className={cn("filter-chip", filterType === t.name && "filter-chip-active")}
+                  onClick={() => setFilterType(filterType === t.name ? "" : t.name)}
+                  aria-pressed={filterType === t.name}
                 >
-                  {t}
+                  {t.name}
                 </button>
               ))}
             </div>
@@ -500,7 +520,7 @@ export default function DashboardClient({
                 className="animate-fade-in"
                 style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
               >
-                <EntryCard entry={entry} typeColorClass={TYPE_COLORS[entry.type]} userId={userId} />
+                <EntryCard entry={entry} typeColorClass={getTypeColorClass(entry.type)} userId={userId} />
               </div>
             ))}
             {loadingMore && Array.from({ length: 6 }).map((_, i) => (
@@ -515,7 +535,7 @@ export default function DashboardClient({
                 className="animate-fade-in"
                 style={{ animationDelay: `${Math.min(i * 20, 200)}ms` }}
               >
-                <EntryListItem entry={entry} typeColorClass={TYPE_COLORS[entry.type]} userId={userId} />
+                <EntryListItem entry={entry} typeColorClass={getTypeColorClass(entry.type)} userId={userId} />
               </div>
             ))}
             {loadingMore && Array.from({ length: 6 }).map((_, i) => (
@@ -600,7 +620,7 @@ export default function DashboardClient({
                         )}
                       </Link>
                     </td>
-                    <td><span className={`badge ${TYPE_COLORS[entry.type]}`}>{entry.type}</span></td>
+                    <td><span className={`badge ${getTypeColorClass(entry.type)}`}>{entry.type}</span></td>
                     <td>{entry.category?.name ?? "—"}</td>
                     <td>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -720,7 +740,7 @@ export default function DashboardClient({
                 className="masonry-item animate-fade-in"
                 style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
               >
-                <EntryCard entry={entry} typeColorClass={TYPE_COLORS[entry.type]} userId={userId} />
+                <EntryCard entry={entry} typeColorClass={getTypeColorClass(entry.type)} userId={userId} />
               </div>
             ))}
             {loadingMore && Array.from({ length: 6 }).map((_, i) => (

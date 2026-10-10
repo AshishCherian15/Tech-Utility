@@ -1,14 +1,18 @@
-export type EntryType =
-  | "Tip"
-  | "Trick"
-  | "Hack"
-  | "App"
-  | "Website"
-  | "Tool"
-  | "Extension"
-  | "Command"
-  | "Guide"
-  | "Prompt";
+// Entry type is now database-driven (from entry_types table)
+// The old enum values are preserved as seeded data
+export type EntryType = string;
+
+export interface EntryTypeConfig {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  color: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export type DifficultyLevel = "Easy" | "Medium" | "Hard";
 
