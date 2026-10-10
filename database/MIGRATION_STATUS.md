@@ -74,6 +74,15 @@ These migration files exist but may not have been applied to production yet. Ver
 - **Note:** Cron job route not yet implemented (requires Vercel cron setup)
 - **How to Apply:** Copy SQL contents → Supabase SQL Editor → Run
 
+### 9. Entry Types Table
+- **File:** `database/08-add-entry-types-table.sql`
+- **Status:** ⏳ Verify in production
+- **Adds:** `entry_types` table with RLS policies
+- **Seeds:** 8 default entry types (command, app, website, extension, library, workflow, guide, tool)
+- **Purpose:** Dynamic entry type management (replaces hardcoded enum)
+- **Code Impact:** EntryForm, DashboardClient, EntryTypesClient already updated
+- **How to Apply:** Copy SQL contents → Supabase SQL Editor → Run
+
 ## 📋 Verification Steps
 
 To verify which migrations are applied in your production Supabase:
@@ -104,6 +113,14 @@ SELECT COUNT(*) FROM categories;
 
 -- Check seed data entries
 SELECT COUNT(*) FROM entries WHERE status = 'PUBLISHED';
+
+-- Check if entry_types table exists
+SELECT table_name
+FROM information_schema.tables
+WHERE table_name = 'entry_types' AND table_schema = 'public';
+
+-- Check entry types count
+SELECT COUNT(*) FROM entry_types WHERE is_active = true;
 ```
 
 ## 🔧 How to Apply Pending Migrations
@@ -131,6 +148,7 @@ Always apply migrations in this order:
 6. `database/05-add-published-index.sql` (performance index)
 7. `database/06-add-reports-constraint.sql` (reports constraint)
 8. `database/07-link-health-checks.sql` (link health table)
+9. `database/08-add-entry-types-table.sql` (dynamic entry types)
 
 After applying any migration, refresh PostgREST schema cache:
 

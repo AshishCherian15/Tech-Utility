@@ -42,6 +42,20 @@ CREATE POLICY "Active entry types are publicly readable"
   FOR SELECT
   USING (is_active = true);
 
+-- Policy: Admins can read all entry types (including inactive)
+CREATE POLICY "Admins can read all entry types"
+  ON public.entry_types
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.users
+      WHERE id = auth.uid()
+      AND email = (SELECT value FROM (
+        SELECT current_setting('app.admin_email', true) AS value
+      ) WHERE value IS NOT NULL)
+    )
+  );
+
 -- Policy: Only admins can insert new types
 CREATE POLICY "Only admins can create entry types"
   ON public.entry_types
