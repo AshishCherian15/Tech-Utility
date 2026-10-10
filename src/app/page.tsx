@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
-import { ArrowRight, Search, Zap, Sparkles, FolderOpen, Tag, Code2, Globe } from "lucide-react";
+import { ArrowRight, Search, Sparkles, FolderOpen, Tag, Code2, Globe, Zap } from "lucide-react";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -48,15 +48,27 @@ export default async function Home() {
             </h1>
             
             <p className="hero-subtitle">
-              A searchable, growing library of useful tech tools, tips, websites, apps, commands, and learning resources — discovered once, explained clearly, kept up to date.
+              A searchable, community-reviewed library of useful tech tools, tips, websites, apps, commands, and learning resources — discovered once, explained clearly, kept up to date.
             </p>
-            
+
+            <div className="hero-search">
+              <Search className="search-icon" size={20} />
+              <input
+                type="text"
+                placeholder="What tech tool or tip are you looking for?"
+                className="hero-search-input"
+              />
+              <Link href="/login" className="btn btn-primary hero-search-btn">
+                Search
+              </Link>
+            </div>
+
             <div className="hero-cta">
               <Link href="/login" className="btn btn-primary hero-btn-main">
                 Start Contributing <ArrowRight size={20} />
               </Link>
               <Link href="#features" className="btn btn-secondary hero-btn-alt">
-                Explore Features
+                Learn More
               </Link>
             </div>
             
@@ -77,48 +89,81 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* Recently Added Section */}
+        <section className="recent-section">
+          <div className="recent-header">
+            <div className="recent-header-left">
+              <h2>Recently Added</h2>
+              <p>The latest contributions to the ByteShelf library</p>
+            </div>
+            <Link href="/login" className="btn btn-secondary">View All</Link>
+          </div>
+          <div className="recent-grid">
+            <div className="recent-card">
+              <div className="recent-badge">Command</div>
+              <h3>Example Command</h3>
+              <p>A useful terminal command for developers</p>
+            </div>
+            <div className="recent-card">
+              <div className="recent-badge">Website</div>
+              <h3>Example Website</h3>
+              <p>A helpful web tool or resource</p>
+            </div>
+            <div className="recent-card">
+              <div className="recent-badge">Guide</div>
+              <h3>Example Guide</h3>
+              <p>Step-by-step tutorial or documentation</p>
+            </div>
+            <div className="recent-card">
+              <div className="recent-badge">Tool</div>
+              <h3>Example Tool</h3>
+              <p>A utility or helper application</p>
+            </div>
+          </div>
+        </section>
+
         {/* Features Section */}
         <section id="features" className="features-section">
           <div className="features-header">
-            <h2>Everything you need to stay organized</h2>
-            <p>ByteShelf is built for developers, designers, students, and tech enthusiasts who want useful tools explained clearly in one shared library.</p>
+            <h2>Browse, Contribute, Review</h2>
+            <p>ByteShelf is a community-reviewed library where contributors share useful tools, tips, and resources. Every entry is reviewed before publication to ensure quality and accuracy.</p>
           </div>
-          
+
           <div className="features-grid">
             <div className="feature-card">
               <div className="feature-icon-wrapper"><Globe className="feature-icon" size={24} /></div>
-              <h3>Save Anything</h3>
-              <p>Store useful websites, web apps, API docs, and repositories with a single click.</p>
+              <h3>Browse Public Library</h3>
+              <p>Explore a growing collection of vetted tools, commands, and resources shared by the community.</p>
             </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><Search className="feature-icon" size={24} /></div>
-              <h3>Instant Search</h3>
-              <p>Find exactly what you need in milliseconds. No more digging through folders.</p>
-            </div>
-            
+
             <div className="feature-card">
               <div className="feature-icon-wrapper"><FolderOpen className="feature-icon" size={24} /></div>
-              <h3>Smart Categories</h3>
-              <p>Organize your knowledge logically. Group similar tools together effortlessly.</p>
+              <h3>Contribute Knowledge</h3>
+              <p>Submit your discoveries to help others. Every contribution is reviewed by moderators before publication.</p>
             </div>
-            
+
+            <div className="feature-card">
+              <div className="feature-icon-wrapper"><Search className="feature-icon" size={24} /></div>
+              <h3>Find Fast</h3>
+              <p>Search by title, tag, command, category, or platform. Find exactly what you need in milliseconds.</p>
+            </div>
+
             <div className="feature-card">
               <div className="feature-icon-wrapper"><Tag className="feature-icon" size={24} /></div>
-              <h3>Tags & Metadata</h3>
-              <p>Add rich context to your saves so you always remember why a tool is useful.</p>
+              <h3>Rich Metadata</h3>
+              <p>Every entry includes type, difficulty, platform, pricing, and tags for precise filtering and discovery.</p>
             </div>
-            
+
             <div className="feature-card">
               <div className="feature-icon-wrapper"><Zap className="feature-icon" size={24} /></div>
-              <h3>AI Extraction</h3>
-              <p>Automatically extract titles, descriptions, and tags directly from URLs.</p>
+              <h3>AI Assisted Drafting</h3>
+              <p>Automatically extract titles, descriptions, and tags from URLs to speed up your contribution workflow.</p>
             </div>
-            
+
             <div className="feature-card">
               <div className="feature-icon-wrapper"><Code2 className="feature-icon" size={24} /></div>
-              <h3>Code Snippets</h3>
-              <p>Save those terminal commands and config snippets you always end up Googling.</p>
+              <h3>Save Commands</h3>
+              <p>Keep those terminal commands and config snippets you always end up searching for again.</p>
             </div>
           </div>
         </section>
@@ -126,8 +171,8 @@ export default async function Home() {
         {/* Bottom CTA */}
         <section className="cta-section">
           <div className="cta-box">
-            <h2>Ready to declutter your tech life?</h2>
-            <p>Join ByteShelf and help build a useful, reviewed library of digital tools and technical know-how.</p>
+            <h2>Ready to contribute?</h2>
+            <p>Join ByteShelf and help build a useful, reviewed library of digital tools and technical know-how for the community.</p>
             <Link href="/login" className="btn btn-primary cta-btn">
               Create Your Free Account
             </Link>
@@ -343,15 +388,58 @@ export default async function Home() {
           color: var(--text-secondary);
           line-height: 1.6;
           max-width: 720px;
-          margin: 0 auto 48px;
+          margin: 0 auto 32px;
           animation: fade-up 0.7s ease-out 0.2s both;
+        }
+
+        .hero-search {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          max-width: 640px;
+          width: 100%;
+          margin: 0 auto 48px;
+          padding: 12px 16px;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 16px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+          backdrop-filter: blur(12px);
+          animation: fade-up 0.8s ease-out 0.3s both;
+        }
+
+        .search-icon {
+          color: var(--text-muted);
+          flex-shrink: 0;
+        }
+
+        .hero-search-input {
+          flex: 1;
+          border: none;
+          background: transparent;
+          font-size: 16px;
+          color: var(--text-primary);
+          outline: none;
+          padding: 8px 0;
+        }
+
+        .hero-search-input::placeholder {
+          color: var(--text-muted);
+        }
+
+        .hero-search-btn {
+          padding: 10px 20px;
+          font-size: 15px;
+          font-weight: 600;
+          border-radius: 12px;
+          white-space: nowrap;
         }
 
         .hero-cta {
           display: flex;
           gap: 16px;
           margin-bottom: 72px;
-          animation: fade-up 0.8s ease-out 0.3s both;
+          animation: fade-up 0.9s ease-out 0.4s both;
         }
 
         .hero-btn-main {
@@ -539,6 +627,78 @@ export default async function Home() {
           padding: 16px 36px;
           border-radius: 12px;
           position: relative;
+        }
+
+        .recent-section {
+          padding: 100px 32px;
+          max-width: 1280px;
+          width: 100%;
+          margin: 0 auto;
+        }
+
+        .recent-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 48px;
+        }
+
+        .recent-header-left h2 {
+          font-size: 32px;
+          font-weight: 800;
+          color: var(--text-primary);
+          letter-spacing: -1px;
+          margin-bottom: 8px;
+        }
+
+        .recent-header-left p {
+          font-size: 16px;
+          color: var(--text-muted);
+        }
+
+        .recent-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 24px;
+        }
+
+        .recent-card {
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid var(--border-card);
+          border-radius: 20px;
+          padding: 28px;
+          transition: all 0.3s ease;
+        }
+
+        .recent-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        .recent-badge {
+          display: inline-block;
+          padding: 6px 14px;
+          background: rgba(59, 130, 246, 0.1);
+          color: #60a5fa;
+          border-radius: 100px;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 16px;
+        }
+
+        .recent-card h3 {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin-bottom: 12px;
+        }
+
+        .recent-card p {
+          font-size: 14px;
+          color: var(--text-muted);
+          line-height: 1.6;
         }
 
         .home-footer {

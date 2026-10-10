@@ -1,43 +1,82 @@
 import type { Metadata } from "next";
+import { PublicPage } from "@/components/PublicPage";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Terms of Service for ByteShelf.",
+  description: "Terms of Service for using ByteShelf.",
+};
+
+const termsContent = {
+  slug: "terms",
+  title: "Terms of Service",
+  eyebrow: "Legal",
+  description: "Rules and guidelines for using ByteShelf, contributing content, and interacting with the community.",
+  sections: [
+    {
+      title: "Acceptance of Terms",
+      body: [
+        "By accessing and using ByteShelf, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our service.",
+        "We reserve the right to modify these terms at any time. Continued use of the service after changes constitutes acceptance of the updated terms.",
+      ],
+    },
+    {
+      title: "Description of Service",
+      body: [
+        "ByteShelf is a community-built public library of useful technology tools, tips, commands, websites, apps, guides, and workflows. The service allows users to discover entries, contribute new entries, and participate in the review and moderation process.",
+        "We reserve the right to modify, suspend, or discontinue the service at any time without notice, though we will strive to communicate significant changes to our users.",
+      ],
+    },
+    {
+      title: "User Accounts and Authentication",
+      body: [
+        "You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account.",
+        "You must be at least 13 years old to create an account. By creating an account, you represent that you meet this age requirement.",
+      ],
+    },
+    {
+      title: "Content Submission and Moderation",
+      body: [
+        "You retain ownership of content you submit to ByteShelf. By submitting content, you grant us a non-exclusive, worldwide, royalty-free license to use, display, and distribute your content in connection with the service.",
+        "All submissions are subject to review by moderators before publication. We reserve the right to reject or remove content that violates our guidelines, is inaccurate, or does not meet our quality standards.",
+        "You agree not to submit content that is illegal, abusive, harmful, infringes on intellectual property rights, or violates the privacy of others.",
+      ],
+    },
+    {
+      title: "User Conduct",
+      body: [
+        "You agree to use ByteShelf for its intended purpose: building a useful, respectful community knowledge base. Prohibited conduct includes harassment, spam, malicious submissions, and attempts to disrupt the service.",
+        "We reserve the right to suspend or terminate accounts that violate these terms or engage in abusive behavior.",
+      ],
+    },
+    {
+      title: "Intellectual Property",
+      body: [
+        "You represent that you have the right to submit any content you post to ByteShelf and that your submissions do not infringe on the intellectual property rights of others.",
+        "If you believe your intellectual property has been used without authorization, please use our contact form to report the issue.",
+      ],
+    },
+    {
+      title: "Disclaimer of Warranties",
+      body: [
+        "ByteShelf is provided as is without warranties of any kind, whether express or implied. We do not guarantee that the service will be uninterrupted, secure, or error-free.",
+        "Technical commands, snippets, and tools in the library are user-generated. Use them at your own risk and verify commands before running them, especially in production environments.",
+      ],
+    },
+    {
+      title: "Limitation of Liability",
+      body: [
+        "In no event shall ByteShelf or its operators be liable for any indirect, incidental, special, or consequential damages arising out of or in connection with your use of the service, including but not limited to data loss or system damage.",
+      ],
+    },
+    {
+      title: "Governing Law",
+      body: [
+        "These terms are governed by the laws of the jurisdiction in which ByteShelf operates. Any disputes arising from these terms shall be resolved through the applicable legal system.",
+      ],
+    },
+  ],
 };
 
 export default function TermsPage() {
-  return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: "64px 24px", lineHeight: 1.6 }}>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 24 }}>Terms of Service</h1>
-      <p style={{ color: "var(--text-muted)", marginBottom: 32 }}>Last updated: {new Date().toLocaleDateString()}</p>
-      
-      <div style={{ color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: 24 }}>
-        <section>
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>1. Acceptance of Terms</h2>
-          <p>By accessing and using ByteShelf, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our service.</p>
-        </section>
-
-        <section>
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>2. Description of Service</h2>
-          <p>ByteShelf is a knowledge base platform for sharing technical tips, commands, and discoveries. We reserve the right to modify, suspend, or discontinue the service at any time without notice.</p>
-        </section>
-
-        <section>
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>3. User Conduct and Content</h2>
-          <p>You are solely responsible for any content you post on ByteShelf. By submitting content, you grant us a non-exclusive, worldwide, royalty-free license to use, display, and distribute your content in connection with the service.</p>
-          <p style={{ marginTop: 12 }}>You agree not to post content that is illegal, abusive, or infringes on the intellectual property rights of others. We reserve the right to remove any content or terminate accounts at our sole discretion.</p>
-        </section>
-
-        <section>
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>4. Disclaimer of Warranties</h2>
-          <p>ByteShelf is provided &quot;as is&quot; without warranties of any kind, whether express or implied. We do not guarantee that the service will be uninterrupted or error-free. The snippets and commands on this platform are user-generated; use them at your own risk.</p>
-        </section>
-
-        <section>
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>5. Limitation of Liability</h2>
-          <p>In no event shall ByteShelf or its operators be liable for any indirect, incidental, special, or consequential damages arising out of or in connection with your use of the service.</p>
-        </section>
-      </div>
-    </div>
-  );
+  return <PublicPage page={termsContent} />;
 }
