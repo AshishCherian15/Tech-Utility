@@ -30,10 +30,10 @@
   --border-focus: #4361ee;
   --border-card: #e1e7f0;
 
-  /* Text - Better contrast and hierarchy */
+  /* Text - Better contrast and hierarchy (WCAG AA compliant) */
   --text-primary: #1e293b;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text-secondary: #334155;
+  --text-muted: #475569;
   --text-accent: #4361ee;
 
   /* Entry card pastel colors - Enhanced */
