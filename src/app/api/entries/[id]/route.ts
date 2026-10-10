@@ -12,6 +12,19 @@ export async function GET(_req: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Check if status column exists (backward compatibility)
+  let hasStatusColumn = false;
+  try {
+    const { error: statusCheckError } = await supabase
+      .from("entries")
+      .select("status")
+      .limit(1);
+    hasStatusColumn = !statusCheckError;
+  } catch {
+    hasStatusColumn = false;
+  }
+
+  // First try to get the entry
   const { data, error } = await supabase
     .from("entries")
     .select("*, category:categories(*), links:entry_links(*)")
@@ -20,6 +33,29 @@ export async function GET(_req: Request, { params }: RouteParams) {
     .single();
 
   if (error || !data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // If status column exists, check permissions
+  if (hasStatusColumn) {
+    // Get user role
+    let role = "CONTRIBUTOR";
+    try {
+      const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
+      role = dbUser?.role || "CONTRIBUTOR";
+    } catch {
+      role = "CONTRIBUTOR";
+    }
+    const isModOrAdmin = ["MODERATOR", "ADMIN"].includes(role);
+
+    // Allow: PUBLISHED for everyone, own entries for author, PENDING for mods/admins
+    const isOwnEntry = data.user_id === user.id;
+    const isPublished = data.status === "PUBLISHED";
+    const isPending = data.status === "PENDING";
+
+    if (!isPublished && !isOwnEntry && !(isModOrAdmin && isPending)) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+  }
+
   return NextResponse.json(data);
 }
 
@@ -41,8 +77,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     hasStatusColumn = false;
   }
 
-  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
-  const role = dbUser?.role || "CONTRIBUTOR";
+  // Get user role (fallback if users table doesn't exist)
+  let role = "CONTRIBUTOR";
+  try {
+    const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
+    role = dbUser?.role || "CONTRIBUTOR";
+  } catch {
+    // users table might not exist, use default role
+    role = "CONTRIBUTOR";
+  }
   const isModOrAdmin = ["MODERATOR", "ADMIN"].includes(role);
 
   const { data: existing, error: existingError } = await supabase
@@ -123,8 +166,15 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).single();
-  const role = dbUser?.role || "CONTRIBUTOR";
+  // Get user role (fallback if users table doesn't exist)
+  let role = "CONTRIBUTOR";
+  try {
+    const { data: dbUser } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
+    role = dbUser?.role || "CONTRIBUTOR";
+  } catch {
+    // users table might not exist, use default role
+    role = "CONTRIBUTOR";
+  }
   const isModOrAdmin = ["MODERATOR", "ADMIN"].includes(role);
 
   const { data: existing, error: existingError } = await supabase
