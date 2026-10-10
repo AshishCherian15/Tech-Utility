@@ -131,6 +131,8 @@ export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entrie
             alt={entry.title}
             loading="lazy"
             decoding="async"
+            width="400"
+            height="130"
             style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s ease" }}
           />
         </div>

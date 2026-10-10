@@ -745,7 +745,7 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
                   {form.images.map((img, i) => (
                     <div key={i} style={{ position: "relative" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {imageUrls[i] && <img src={imageUrls[i]} alt={`Entry image ${i + 1}`} loading="lazy" decoding="async" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border-card)" }} />}
+                      {imageUrls[i] && <img src={imageUrls[i]} alt={`Entry image ${i + 1}`} loading="lazy" decoding="async" width="80" height="60" style={{ width: "80px", height: "60px", objectFit: "cover", borderRadius: 8, border: "1px solid var(--border-card)" }} />}
                       <button
                         type="button"
                         aria-label={`Remove image ${i + 1}`}

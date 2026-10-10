@@ -58,7 +58,7 @@ function GalleryCard({ entry, index, userId }: { entry: Entry; index: number; us
       <div className="gallery-card-img">
         {imageUrls[0] ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrls[0]} alt={entry.title} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={imageUrls[0]} alt={entry.title} loading="lazy" decoding="async" width="400" height="300" style={{ width: "100%", height: "100%", objectFit: "cover", aspectRatio: "4/3" }} />
         ) : (
           <div className="gallery-card-placeholder">
             <span className={`badge ${getTypeColorClass(entry.type)}`}>{entry.type}</span>
