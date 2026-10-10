@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { Entry, Category, ViewMode, SortOption, EntryType, DifficultyLevel, Platform, PricingTier } from "@/lib/types";
 import EntryCard from "@/components/EntryCard";
+import EntryCardSkeleton from "@/components/EntryCardSkeleton";
 import EntryListItem from "@/components/EntryListItem";
 import { cn } from "@/lib/utils";
 import { useImageUrls } from "@/lib/use-image-urls";
@@ -485,6 +486,9 @@ export default function DashboardClient({
                 <EntryCard entry={entry} typeColorClass={TYPE_COLORS[entry.type]} />
               </div>
             ))}
+            {loadingMore && Array.from({ length: 6 }).map((_, i) => (
+              <EntryCardSkeleton key={`skeleton-${i}`} />
+            ))}
           </div>
         ) : view === "list" ? (
           <div className="entry-list">
@@ -495,6 +499,51 @@ export default function DashboardClient({
                 style={{ animationDelay: `${Math.min(i * 20, 200)}ms` }}
               >
                 <EntryListItem entry={entry} typeColorClass={TYPE_COLORS[entry.type]} />
+              </div>
+            ))}
+            {loadingMore && Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={`skeleton-${i}`}
+                style={{
+                  padding: "12px 16px",
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: 8,
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 8,
+                    background: "var(--bg-muted)",
+                    flexShrink: 0,
+                  }}
+                  className="shimmer"
+                />
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div
+                    style={{
+                      width: "60%",
+                      height: 16,
+                      borderRadius: 4,
+                      background: "var(--bg-muted)",
+                    }}
+                    className="shimmer"
+                  />
+                  <div
+                    style={{
+                      width: "40%",
+                      height: 12,
+                      borderRadius: 4,
+                      background: "var(--bg-muted)",
+                    }}
+                    className="shimmer"
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -537,6 +586,98 @@ export default function DashboardClient({
                     </td>
                   </tr>
                 ))}
+                {loadingMore && Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={`skeleton-${i}`}>
+                    <td>
+                      <div
+                        style={{
+                          width: "60%",
+                          height: 14,
+                          borderRadius: 4,
+                          background: "var(--bg-muted)",
+                        }}
+                        className="shimmer"
+                      />
+                    </td>
+                    <td>
+                      <div
+                        style={{
+                          width: 40,
+                          height: 18,
+                          borderRadius: 4,
+                          background: "var(--bg-muted)",
+                        }}
+                        className="shimmer"
+                      />
+                    </td>
+                    <td>
+                      <div
+                        style={{
+                          width: 50,
+                          height: 14,
+                          borderRadius: 4,
+                          background: "var(--bg-muted)",
+                        }}
+                        className="shimmer"
+                      />
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <div
+                          style={{
+                            width: 30,
+                            height: 14,
+                            borderRadius: 4,
+                            background: "var(--bg-muted)",
+                          }}
+                          className="shimmer"
+                        />
+                        <div
+                          style={{
+                            width: 30,
+                            height: 14,
+                            borderRadius: 4,
+                            background: "var(--bg-muted)",
+                          }}
+                          className="shimmer"
+                        />
+                      </div>
+                    </td>
+                    <td>
+                      <div
+                        style={{
+                          width: 40,
+                          height: 14,
+                          borderRadius: 4,
+                          background: "var(--bg-muted)",
+                        }}
+                        className="shimmer"
+                      />
+                    </td>
+                    <td>
+                      <div
+                        style={{
+                          width: 40,
+                          height: 14,
+                          borderRadius: 4,
+                          background: "var(--bg-muted)",
+                        }}
+                        className="shimmer"
+                      />
+                    </td>
+                    <td>
+                      <div
+                        style={{
+                          width: 60,
+                          height: 12,
+                          borderRadius: 4,
+                          background: "var(--bg-muted)",
+                        }}
+                        className="shimmer"
+                      />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -552,12 +693,22 @@ export default function DashboardClient({
                 <EntryCard entry={entry} typeColorClass={TYPE_COLORS[entry.type]} />
               </div>
             ))}
+            {loadingMore && Array.from({ length: 6 }).map((_, i) => (
+              <div key={`skeleton-${i}`} className="masonry-item">
+                <EntryCardSkeleton />
+              </div>
+            ))}
           </div>
         ) : (
           /* Gallery view */
           <div className="gallery-grid">
             {filtered.map((entry, i) => (
               <GalleryCard key={entry.id} entry={entry} index={i} />
+            ))}
+            {loadingMore && Array.from({ length: 6 }).map((_, i) => (
+              <div key={`skeleton-${i}`} className="gallery-item">
+                <EntryCardSkeleton />
+              </div>
             ))}
           </div>
         )}
