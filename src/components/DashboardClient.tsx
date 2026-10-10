@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
-  Search, Plus, Grid3X3, List, Table, Image as ImageIcon,
+  Search, Plus, Grid3X3, List, Table, Image as ImageIcon, LayoutGrid,
   Pin, SlidersHorizontal, X, Lightbulb, Terminal, Wrench, BookOpen
 } from "lucide-react";
 import type { Entry, Category, ViewMode, SortOption, EntryType, DifficultyLevel, Platform, PricingTier } from "@/lib/types";
@@ -327,12 +327,13 @@ export default function DashboardClient({
 
           {/* View switcher */}
           <div className="view-switcher" role="group" aria-label="Entry layout">
-            {([
+            {[
               { mode: "grid" as ViewMode, icon: Grid3X3 },
               { mode: "list" as ViewMode, icon: List },
               { mode: "table" as ViewMode, icon: Table },
               { mode: "gallery" as ViewMode, icon: ImageIcon },
-            ]).map(({ mode, icon: Icon }) => (
+              { mode: "masonry" as ViewMode, icon: LayoutGrid },
+            ].map(({ mode, icon: Icon }) => (
               <button
                 key={mode}
                 type="button"
@@ -538,6 +539,19 @@ export default function DashboardClient({
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : view === "masonry" ? (
+          /* Masonry view */
+          <div className="entry-masonry">
+            {filtered.map((entry, i) => (
+              <div
+                key={entry.id}
+                className="masonry-item animate-fade-in"
+                style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
+              >
+                <EntryCard entry={entry} typeColorClass={TYPE_COLORS[entry.type]} />
+              </div>
+            ))}
           </div>
         ) : (
           /* Gallery view */

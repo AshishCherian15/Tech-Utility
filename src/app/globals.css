@@ -800,6 +800,36 @@ select.input:focus {
   }
 }
 
+/* ─── Entry masonry ──────────────────────────────────────────── */
+.entry-masonry {
+  columns: 3;
+  column-gap: 16px;
+}
+
+@media (min-width: 1400px) {
+  .entry-masonry {
+    columns: 3;
+    column-gap: 18px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .entry-masonry {
+    columns: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .entry-masonry {
+    columns: 1;
+  }
+}
+
+.masonry-item {
+  break-inside: avoid;
+  margin-bottom: 16px;
+}
+
 .entry-list {
   display: flex;
   flex-direction: column;

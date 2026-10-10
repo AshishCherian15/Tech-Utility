@@ -5,6 +5,13 @@ import { Star, Pin, Copy, Check, Terminal } from "lucide-react";
 import { useState } from "react";
 import type { Entry } from "@/lib/types";
 import { formatRelativeDate, truncate } from "@/lib/utils";
+import { useToast } from "@/components/Toast";
+
+interface EntryCardProps {
+  entry: Entry;
+  typeColorClass: string;
+  hrefPrefix?: "/entries" | "/entry";
+}
 
 interface EntryCardProps {
   entry: Entry;
@@ -31,6 +38,11 @@ const PRICING_COLORS: Record<string, string> = {
 
 export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entries" }: EntryCardProps) {
   const [copied, setCopied] = useState(false);
+  const [favorited, setFavorited] = useState(entry.favorited);
+  const [pinned, setPinned] = useState(entry.pinned);
+  const [updatingFavorite, setUpdatingFavorite] = useState(false);
+  const [updatingPin, setUpdatingPin] = useState(false);
+  const { success, error } = useToast();
 
   const cardBg = entry.color ? CARD_COLORS[entry.color] ?? "var(--bg-card)" : "var(--bg-card)";
 
@@ -41,6 +53,52 @@ export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entrie
       await navigator.clipboard.writeText(entry.command_snippet);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const toggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (updatingFavorite) return;
+    const newVal = !favorited;
+    setFavorited(newVal);
+    setUpdatingFavorite(true);
+    try {
+      const response = await fetch(`/api/entries/${entry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ favorited: newVal }),
+      });
+      if (!response.ok) throw new Error("Could not update favorite");
+      success(newVal ? "Added to favorites" : "Removed from favorites");
+    } catch {
+      setFavorited(!newVal);
+      error("Could not update favorite");
+    } finally {
+      setUpdatingFavorite(false);
+    }
+  };
+
+  const togglePin = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (updatingPin) return;
+    const newVal = !pinned;
+    setPinned(newVal);
+    setUpdatingPin(true);
+    try {
+      const response = await fetch(`/api/entries/${entry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned: newVal }),
+      });
+      if (!response.ok) throw new Error("Could not update pin");
+      success(newVal ? "Pinned to top" : "Unpinned");
+    } catch {
+      setPinned(!newVal);
+      error("Could not update pin");
+    } finally {
+      setUpdatingPin(false);
     }
   };
 
@@ -80,8 +138,56 @@ export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entrie
           )}
         </div>
         <div className="entry-card-actions">
-          {entry.favorited && <Star size={13} style={{ color: "#fbbf24", fill: "#fbbf24" }} />}
-          {entry.pinned && <Pin size={12} style={{ color: "var(--brand-blue-bright)" }} />}
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            disabled={updatingFavorite}
+            aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+            aria-pressed={favorited}
+            style={{ 
+              background: "none", 
+              border: "none", 
+              cursor: "pointer", 
+              padding: 4,
+              opacity: updatingFavorite ? 0.5 : 1,
+              transition: "opacity 0.2s"
+            }}
+          >
+            <Star size={13} style={{ color: favorited ? "#fbbf24" : "var(--text-muted)", fill: favorited ? "#fbbf24" : "none" }} />
+          </button>
+          <button
+            type="button"
+            onClick={togglePin}
+            disabled={updatingPin}
+            aria-label={pinned ? "Unpin entry" : "Pin entry"}
+            aria-pressed={pinned}
+            style={{ 
+              background: "none", 
+              border: "none", 
+              cursor: "pointer", 
+              padding: 4,
+              opacity: updatingPin ? 0.5 : 1,
+              transition: "opacity 0.2s"
+            }}
+          >
+            <Pin size={12} style={{ color: pinned ? "var(--brand-blue-bright)" : "var(--text-muted)" }} />
+          </button>
+          {entry.command_snippet && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              aria-label="Copy command"
+              style={{ 
+                background: "none", 
+                border: "none", 
+                cursor: "pointer", 
+                padding: 4,
+                transition: "opacity 0.2s"
+              }}
+            >
+              {copied ? <Check size={13} style={{ color: "#22c55e" }} /> : <Terminal size={13} style={{ color: "var(--text-muted)" }} />}
+            </button>
+          )}
         </div>
       </div>
 

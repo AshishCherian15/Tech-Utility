@@ -109,7 +109,7 @@ export interface Entry {
   updated_at: string;
 }
 
-export type ViewMode = "grid" | "list" | "table" | "gallery";
+export type ViewMode = "grid" | "list" | "table" | "gallery" | "masonry";
 
 export type SortOption =
   | "newest"
