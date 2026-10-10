@@ -7,7 +7,7 @@ import { useToast } from "@/components/Toast";
 import {
   Edit, Trash2, Star, Pin, Copy, Check,
   ExternalLink, Terminal, Tag, ChevronRight, Download,
-  Globe, Shield, Zap, Clock, Users, BookOpen, Lightbulb
+  Globe, Shield, Zap, Clock, Users, BookOpen, Lightbulb, Flag
 } from "lucide-react";
 import type { Entry } from "@/lib/types";
 import { formatDate, formatRelativeDate } from "@/lib/utils";
@@ -47,6 +47,7 @@ export default function EntryDetail({
   const [updatingFavorite, setUpdatingFavorite] = useState(false);
   const [updatingPin, setUpdatingPin] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const imageUrls = useImageUrls(entry.images ?? []);
   const router = useRouter();
   const { success, error } = useToast();
@@ -131,6 +132,28 @@ export default function EntryDetail({
     router.push("/dashboard");
   };
 
+  const handleReport = async () => {
+    if (reporting) return;
+    const reason = prompt("Why are you reporting this entry? (Spam, incorrect, inappropriate, etc.)");
+    if (!reason || reason.trim().length === 0) return;
+    
+    setReporting(true);
+    try {
+      const response = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entry_id: entry.id, reason: reason.trim() }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Could not submit report");
+      success("Report submitted. Thank you for helping keep ByteShelf accurate.");
+    } catch (err) {
+      error(err instanceof Error ? err.message : "Could not submit report");
+    } finally {
+      setReporting(false);
+    }
+  };
+
   const typeColor = TYPE_COLORS[entry.type] ?? "badge-blue";
 
   return (
@@ -184,6 +207,20 @@ export default function EntryDetail({
             {deleting ? "Moving…" : "Delete"}
           </button>
         </div>
+        )}
+        {publicView && (
+          <div className="entry-detail-actions">
+            <button 
+              className="btn btn-ghost btn-sm" 
+              onClick={handleReport} 
+              disabled={reporting}
+              aria-busy={reporting}
+              aria-label="Report this entry"
+            >
+              <Flag size={14} />
+              {reporting ? "Reporting…" : "Report"}
+            </button>
+          </div>
         )}
       </div>
 
