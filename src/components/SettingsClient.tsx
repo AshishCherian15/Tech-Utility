@@ -1312,6 +1312,48 @@ export default function SettingsClient({ user, entryCount, isOwner }: SettingsCl
           </div>
         </div>
 
+        {/* Privacy */}
+        <div className="settings-section">
+          <div className="settings-section-title">Privacy & Data Rights</div>
+          <div className="settings-card" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <div className="settings-row">
+              <div style={{ flex: 1 }}>
+                <div className="settings-row-title">Request Data Export</div>
+                <div className="settings-row-desc">
+                  Download a copy of all your personal data in JSON format. Includes profile, entries, and account metadata.
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleExport}
+                disabled={exporting}
+              >
+                {exporting ? <Loader2 size={14} style={{ animation: "spin 0.7s linear infinite" }} /> : <Download size={14} />}
+                {exporting ? "Exporting…" : "Export my data"}
+              </button>
+            </div>
+
+            <div className="settings-divider" style={{ margin: 0 }} />
+
+            <div className="settings-row">
+              <div style={{ flex: 1 }}>
+                <div className="settings-row-title">Privacy Grievance</div>
+                <div className="settings-row-desc">
+                  If you have concerns about how your data is handled, contact the grievance officer.
+                </div>
+              </div>
+              <Link
+                href="/contact"
+                className="btn btn-secondary btn-sm"
+                style={{ textDecoration: "none" }}
+              >
+                Contact grievance officer
+              </Link>
+            </div>
+          </div>
+        </div>
+
         <AISettingsPanel />
 
         {/* Security */}

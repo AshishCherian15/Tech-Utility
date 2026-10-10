@@ -53,6 +53,9 @@ export default function LoginPage({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptAge, setAcceptAge] = useState(false);
+  const [acceptMarketing, setAcceptMarketing] = useState(false);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +84,22 @@ export default function LoginPage({
     e.preventDefault();
     setLoading("email");
     setError(null);
+    
+    if (!acceptTerms || !acceptAge) {
+      setError("You must accept the Terms of Service and confirm you are at least 13 years old to sign up.");
+      setLoading(null);
+      return;
+    }
+    
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        options: {
+          data: {
+            accept_marketing: acceptMarketing,
+          },
+        },
       });
 
       if (signUpError) {
@@ -303,6 +318,39 @@ export default function LoginPage({
               >
                 {loading === "email" ? (authMode === "email" ? "Signing in…" : "Signing up…") : (authMode === "email" ? "Sign in" : "Sign up")}
               </button>
+              {authMode === "oauth" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "var(--text-secondary)", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={acceptTerms}
+                      onChange={(e) => setAcceptTerms(e.target.checked)}
+                      required
+                      style={{ marginTop: 2 }}
+                    />
+                    <span>I agree to the <Link href="/terms" style={{ color: "var(--text-accent)" }}>Terms of Service</Link> and <Link href="/privacy" style={{ color: "var(--text-accent)" }}>Privacy Policy</Link></span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "var(--text-secondary)", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={acceptAge}
+                      onChange={(e) => setAcceptAge(e.target.checked)}
+                      required
+                      style={{ marginTop: 2 }}
+                    />
+                    <span>I confirm I am at least 13 years old</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "var(--text-secondary)", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={acceptMarketing}
+                      onChange={(e) => setAcceptMarketing(e.target.checked)}
+                      style={{ marginTop: 2 }}
+                    />
+                    <span>I agree to receive optional updates and newsletters (can unsubscribe anytime)</span>
+                  </label>
+                </div>
+              )}
               {authMode === "email" && (
                 <button
                   type="button"
