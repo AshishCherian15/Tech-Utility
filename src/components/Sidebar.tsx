@@ -15,6 +15,7 @@ import {
   Users,
   ClipboardCheck,
   Tag,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -182,7 +183,7 @@ export default function Sidebar({ user, isOwner, userRole }: SidebarProps) {
               style={{ marginLeft: "auto", flexShrink: 0, fontSize: 12, color: "var(--text-muted)" }}
               aria-label={signingOut ? "Signing out" : "Sign out"}
             >
-              ↩
+              <LogOut size={16} />
             </button>
           </>
         ) : (
@@ -250,11 +251,6 @@ export default function Sidebar({ user, isOwner, userRole }: SidebarProps) {
           text-decoration: none;
           transition: all 0.15s ease;
           font-weight: 450;
-        }
-
-        .sidebar-nav-item:hover {
-          background: rgba(255,255,255,0.05);
-          color: var(--text-primary);
         }
 
         .sidebar-nav-item-active {

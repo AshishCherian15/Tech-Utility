@@ -32,11 +32,11 @@ const ICONS: Record<ToastType, React.ReactNode> = {
 };
 
 const COLORS: Record<ToastType, string> = {
-  success: "#22c55e",
-  error: "#ef4444",
-  warning: "#f59e0b",
-  info: "#3b82f6",
-  ai: "#a78bfa",
+  success: "var(--color-success)",
+  error: "var(--color-error)",
+  warning: "var(--color-warning)",
+  info: "var(--brand-primary)",
+  ai: "var(--brand-secondary)",
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {

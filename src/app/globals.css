@@ -22,6 +22,7 @@
   --bg-card-hover: #f1f4f9;
   --bg-input: #f5f7fc;
   --bg-sidebar: #f0f4fa;
+  --bg-muted: #f1f5f9;
   --bg-overlay: rgba(15, 23, 42, 0.45);
 
   /* Borders - Soft, refined */
@@ -970,6 +971,18 @@ select.input:focus {
 
 /* ─── Skeleton loader ───────────────────────────────────────── */
 .skeleton {
+  background: linear-gradient(90deg,
+    var(--bg-card) 25%,
+    var(--bg-card-hover) 50%,
+    var(--bg-card) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+  border-radius: var(--radius-md);
+}
+
+/* Alias for components using shimmer class */
+.shimmer {
   background: linear-gradient(90deg,
     var(--bg-card) 25%,
     var(--bg-card-hover) 50%,
