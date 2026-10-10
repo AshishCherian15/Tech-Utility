@@ -14,6 +14,7 @@ import { useAIConfig } from "@/components/AIConfigProvider";
 const ENTRY_TYPES: EntryType[] = ["Tip","Trick","Hack","App","Website","Tool","Extension","Command","Guide","Prompt"];
 const DIFFICULTY_LEVELS: DifficultyLevel[] = ["Easy", "Medium", "Hard"];
 const PLATFORMS: Platform[] = ["Windows","Android","iOS","macOS","Linux","Web","Cross-platform"];
+const PRICING_TIERS = ["free", "freemium", "paid"] as const;
 const MAX_TAGS = 100;
 const MAX_TAG_LENGTH = 100;
 const COLORS = [
@@ -106,6 +107,8 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
     status: entry?.status ?? "DRAFT",
     hero_tag: entry?.hero_tag ?? "",
     cover_image_url: entry?.cover_image_url ?? "",
+    pricing: (entry?.pricing ?? "") as typeof PRICING_TIERS[number] | "",
+    pricing_note: entry?.pricing_note ?? "",
   });
   const imageUrls = useImageUrls(form.images);
 
@@ -199,6 +202,8 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
           platform: draft.platform ?? prev.platform,
           command_snippet: draft.command_snippet ?? prev.command_snippet,
           hero_tag: draft.hero_tag ?? prev.hero_tag,
+          pricing: draft.pricing ?? prev.pricing,
+          pricing_note: draft.pricing_note ?? prev.pricing_note,
         }));
         setAiDrafted(true);
         setShowAiPanel(false);
@@ -253,6 +258,8 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
         difficulty: form.difficulty || null,
         platform: form.platform || null,
         color: form.color || null,
+        pricing: form.pricing || null,
+        pricing_note: form.pricing_note || null,
         tags: form.tags,
         hero_tag: form.hero_tag || null,
         cover_image_url: form.cover_image_url || null,
@@ -640,6 +647,27 @@ export default function EntryForm({ categories, entry, sharedContent, initialTyp
                 {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
+            <div className="form-field">
+              <label htmlFor="field-pricing" className="form-label">Pricing</label>
+              <select id="field-pricing" className="input" value={form.pricing} onChange={e => set("pricing", e.target.value)}>
+                <option value="">— Not set —</option>
+                {PRICING_TIERS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+              </select>
+            </div>
+            {form.pricing === "freemium" || form.pricing === "paid" ? (
+              <div className="form-field">
+                <label htmlFor="field-pricing-note" className="form-label">Pricing Details</label>
+                <input
+                  id="field-pricing-note"
+                  type="text"
+                  className="input"
+                  placeholder="e.g., Free tier includes 5 projects, Pro is $9/mo"
+                  value={form.pricing_note}
+                  onChange={e => set("pricing_note", e.target.value)}
+                  maxLength={500}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
 

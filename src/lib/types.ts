@@ -95,7 +95,6 @@ export interface Entry {
   favorited: boolean;
   // ByteShelf public fields
   status: EntryStatus;
-  author_id: string | null;
   reviewed_by_id: string | null;
   reviewed_at: string | null;
   rejection_reason: string | null;

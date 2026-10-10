@@ -6,7 +6,7 @@ import {
   Search, Plus, Grid3X3, List, Table, Image as ImageIcon,
   Pin, SlidersHorizontal, X, Lightbulb, Terminal, Wrench, BookOpen
 } from "lucide-react";
-import type { Entry, Category, ViewMode, SortOption, EntryType, DifficultyLevel, Platform } from "@/lib/types";
+import type { Entry, Category, ViewMode, SortOption, EntryType, DifficultyLevel, Platform, PricingTier } from "@/lib/types";
 import EntryCard from "@/components/EntryCard";
 import EntryListItem from "@/components/EntryListItem";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ interface DashboardClientProps {
 const ENTRY_TYPES: EntryType[] = ["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"];
 const DIFFICULTY_LEVELS: DifficultyLevel[] = ["Easy", "Medium", "Hard"];
 const PLATFORMS: Platform[] = ["Windows", "Android", "iOS", "macOS", "Linux", "Web", "Cross-platform"];
+const PRICING_TIERS: PricingTier[] = ["free", "freemium", "paid"];
 
 const TYPE_COLORS: Record<EntryType, string> = {
   Tip: "badge-blue",
@@ -89,10 +90,11 @@ export default function DashboardClient({
   const [filterType, setFilterType] = useState<EntryType | "">("");
   const [filterDifficulty, setFilterDifficulty] = useState<DifficultyLevel | "">("");
   const [filterPlatform, setFilterPlatform] = useState<Platform | "">("");
+  const [filterPricing, setFilterPricing] = useState<PricingTier | "">("");
   const [showFilters, setShowFilters] = useState(false);
   const { error: toastError } = useToast();
 
-  const activeFilterCount = [filterCategory, filterType, filterDifficulty, filterPlatform].filter(Boolean).length;
+  const activeFilterCount = [filterCategory, filterType, filterDifficulty, filterPlatform, filterPricing].filter(Boolean).length;
   const hasQuery = search.trim().length > 0;
   const hasActiveCriteria = hasQuery || activeFilterCount > 0;
 
@@ -114,6 +116,7 @@ export default function DashboardClient({
     if (filterType) result = result.filter(e => e.type === filterType);
     if (filterDifficulty) result = result.filter(e => e.difficulty === filterDifficulty);
     if (filterPlatform) result = result.filter(e => e.platform === filterPlatform);
+    if (filterPricing) result = result.filter(e => e.pricing === filterPricing);
 
     // Sort
     result = [...result].sort((a, b) => {
@@ -130,7 +133,7 @@ export default function DashboardClient({
     const pinned = result.filter(e => e.pinned);
     const rest = result.filter(e => !e.pinned);
     return [...pinned, ...rest];
-  }, [entries, search, filterCategory, filterType, filterDifficulty, filterPlatform, sort]);
+  }, [entries, search, filterCategory, filterType, filterDifficulty, filterPlatform, filterPricing, sort]);
 
   const clearFilters = useCallback(() => {
     setSearch("");
@@ -138,12 +141,24 @@ export default function DashboardClient({
     setFilterType("");
     setFilterDifficulty("");
     setFilterPlatform("");
+    setFilterPricing("");
   }, []);
 
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const response = await fetch(`/api/entries?scope=${scope}&limit=100&offset=${nextOffset}`);
+      const params = new URLSearchParams({
+        scope,
+        limit: "100",
+        offset: nextOffset.toString(),
+      });
+      if (filterCategory) params.set("category_id", filterCategory);
+      if (filterType) params.set("type", filterType);
+      if (filterDifficulty) params.set("difficulty", filterDifficulty);
+      if (filterPlatform) params.set("platform", filterPlatform);
+      if (filterPricing) params.set("pricing", filterPricing);
+      
+      const response = await fetch(`/api/entries?${params.toString()}`);
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not load more entries");
       const loadedIds = new Set(entries.map((entry) => entry.id));
@@ -382,6 +397,22 @@ export default function DashboardClient({
                   aria-pressed={filterPlatform === p}
                 >
                   {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="filters-group">
+            <span className="filters-label" id="filter-pricing-label">Pricing</span>
+            <div className="filters-chips" role="group" aria-labelledby="filter-pricing-label">
+              {PRICING_TIERS.map(p => (
+                <button
+                  key={p}
+                  type="button"
+                  className={cn("filter-chip", filterPricing === p && "filter-chip-active")}
+                  onClick={() => setFilterPricing(filterPricing === p ? "" : p)}
+                  aria-pressed={filterPricing === p}
+                >
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
                 </button>
               ))}
             </div>

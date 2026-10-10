@@ -28,6 +28,12 @@ const TYPE_COLORS: Record<string, string> = {
   Guide: "badge-blue", Prompt: "badge-pink",
 };
 
+const PRICING_COLORS: Record<string, string> = {
+  free: "#22c55e",
+  freemium: "#f59e0b",
+  paid: "#ef4444",
+};
+
 export default function EntryDetail({
   entry,
   publicView = false,
@@ -197,6 +203,18 @@ export default function EntryDetail({
               {entry.platform && (
                 <span className="badge badge-blue" style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-secondary)", borderColor: "var(--border-card)" }}>
                   {entry.platform}
+                </span>
+              )}
+              {entry.pricing && (
+                <span
+                  className="badge"
+                  style={{
+                    backgroundColor: `${PRICING_COLORS[entry.pricing]}20`,
+                    color: PRICING_COLORS[entry.pricing],
+                    borderColor: `${PRICING_COLORS[entry.pricing]}40`,
+                  }}
+                >
+                  {entry.pricing.charAt(0).toUpperCase() + entry.pricing.slice(1)}
                 </span>
               )}
               {pinned && <Pin size={14} style={{ color: "var(--brand-blue-bright)" }} />}
@@ -405,6 +423,31 @@ export default function EntryDetail({
             <div className="entry-sidebar-card">
               <div className="entry-sidebar-title">Platform</div>
               <div className="entry-sidebar-value">{entry.platform}</div>
+            </div>
+          )}
+          {entry.pricing && (
+            <div className="entry-sidebar-card">
+              <div className="entry-sidebar-title">Pricing</div>
+              <div className="entry-sidebar-value">
+                <span
+                  className="badge"
+                  style={{
+                    backgroundColor: `${PRICING_COLORS[entry.pricing]}20`,
+                    color: PRICING_COLORS[entry.pricing],
+                    borderColor: `${PRICING_COLORS[entry.pricing]}40`,
+                  }}
+                >
+                  {entry.pricing.charAt(0).toUpperCase() + entry.pricing.slice(1)}
+                </span>
+              </div>
+            </div>
+          )}
+          {entry.pricing_note && (
+            <div className="entry-sidebar-card">
+              <div className="entry-sidebar-title">Pricing Details</div>
+              <div className="entry-sidebar-value" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                {entry.pricing_note}
+              </div>
             </div>
           )}
           <div className="entry-sidebar-card">

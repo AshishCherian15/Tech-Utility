@@ -20,6 +20,8 @@ const entryFields = {
   status: z.enum(["DRAFT", "PENDING", "PUBLISHED", "REJECTED", "FLAGGED"]).nullable(),
   hero_tag: z.string().max(100).nullable(),
   cover_image_url: z.string().url().max(2048).nullable(),
+  pricing: z.enum(["free", "freemium", "paid"]).nullable(),
+  pricing_note: z.string().max(500).nullable(),
 };
 
 export const createEntrySchema = z.object({
@@ -42,6 +44,8 @@ export const createEntrySchema = z.object({
   status: entryFields.status.optional().default("DRAFT"),
   hero_tag: entryFields.hero_tag.optional().default(null),
   cover_image_url: entryFields.cover_image_url.optional().default(null),
+  pricing: entryFields.pricing.optional().default(null),
+  pricing_note: entryFields.pricing_note.optional().default(null),
 }).strict();
 
 export const updateEntrySchema = z.object({

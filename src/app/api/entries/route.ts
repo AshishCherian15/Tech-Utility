@@ -10,6 +10,7 @@ const entryListQuerySchema = z.object({
   type: z.enum(["Tip", "Trick", "Hack", "App", "Website", "Tool", "Extension", "Command", "Guide", "Prompt"]).optional(),
   difficulty: z.enum(["Easy", "Medium", "Hard"]).optional(),
   platform: z.enum(["Windows", "Android", "iOS", "macOS", "Linux", "Web", "Cross-platform"]).optional(),
+  pricing: z.enum(["free", "freemium", "paid"]).optional(),
   favorited: z.enum(["true", "false"]).optional(),
 }).strict();
 
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const rawFilters = Object.fromEntries(
-    ["scope", "q", "category_id", "type", "difficulty", "platform", "favorited"]
+    ["scope", "q", "category_id", "type", "difficulty", "platform", "pricing", "favorited"]
       .flatMap((key) => {
         const value = searchParams.get(key);
         return value === null ? [] : [[key, value]];
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
   if (!parsedFilters.success) {
     return NextResponse.json({ error: "Invalid entry filters" }, { status: 400 });
   }
-  const { scope, q, category_id, type, difficulty, platform, favorited } = parsedFilters.data;
+  const { scope, q, category_id, type, difficulty, platform, pricing, favorited } = parsedFilters.data;
   const limit = Number(searchParams.get("limit") ?? 100);
   const offset = Number(searchParams.get("offset") ?? 0);
   if (
@@ -91,6 +92,7 @@ export async function GET(request: Request) {
   if (type) query = query.eq("type", type);
   if (difficulty) query = query.eq("difficulty", difficulty);
   if (platform) query = query.eq("platform", platform);
+  if (pricing) query = query.eq("pricing", pricing);
   if (favorited !== undefined) query = query.eq("favorited", favorited === "true");
 
   const { data, error, count } = await query;

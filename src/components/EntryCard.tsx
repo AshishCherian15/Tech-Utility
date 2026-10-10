@@ -23,6 +23,12 @@ const CARD_COLORS: Record<string, string> = {
   "#red": "rgba(239,68,68,0.08)",
 };
 
+const PRICING_COLORS: Record<string, string> = {
+  free: "#22c55e",
+  freemium: "#f59e0b",
+  paid: "#ef4444",
+};
+
 export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entries" }: EntryCardProps) {
   const [copied, setCopied] = useState(false);
 
@@ -59,6 +65,18 @@ export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entrie
           <span className={`badge ${typeColorClass}`}>{entry.type}</span>
           {entry.difficulty && (
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>· {entry.difficulty}</span>
+          )}
+          {entry.pricing && (
+            <span
+              className="badge"
+              style={{
+                backgroundColor: `${PRICING_COLORS[entry.pricing]}20`,
+                color: PRICING_COLORS[entry.pricing],
+                fontSize: 11,
+              }}
+            >
+              {entry.pricing.charAt(0).toUpperCase() + entry.pricing.slice(1)}
+            </span>
           )}
         </div>
         <div className="entry-card-actions">
