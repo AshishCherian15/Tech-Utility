@@ -869,3 +869,48 @@ If this document is unclear or you need additional context:
 **Last Updated:** October 10, 2026
 **Last Commit:** `aedcd8f` - Phase 5 DPDP consent checkboxes
 **Next Recommended Phase:** Phase 6 - Dynamic Entry Types & Categories
+
+
+---
+## Phase 6 Completion (October 10, 2026)
+
+**Phase 6: Dynamic Entry Types & Categories - COMPLETED**
+
+**Changes Made:**
+- Created `database/08-add-entry-types-table.sql` migration
+  - Added entry_types table with id, name, description, icon, color, is_active, sort_order
+  - Seeded with 8 default types: command, app, website, extension, library, workflow, guide, tool
+  - Added RLS policies (public read, admin write)
+  - Added updated_at trigger
+- Updated `src/lib/types.ts`
+  - Changed EntryType from enum to string
+  - Added EntryTypeConfig interface
+- Created `src/app/api/entry-types/route.ts`
+  - GET endpoint to fetch active entry types
+- Created `src/app/(app)/entry-types/page.tsx`
+  - Admin-only page for managing entry types
+- Created `src/components/EntryTypesClient.tsx`
+  - CRUD operations for entry types
+  - Table view with inline editing
+  - Create new type form
+- Updated `src/components/Sidebar.tsx`
+  - Added Entry Types link for admin users
+- Updated `src/components/EntryForm.tsx`
+  - Fetches types from database via useEffect
+  - Uses dynamic type names instead of hardcoded enum
+- Updated `src/components/DashboardClient.tsx`
+  - Fetches types from database via useEffect
+  - Uses dynamic type names in filters
+  - Added fallback color mapping function
+- Updated `src/lib/validation/entry.ts`
+  - Changed type validation from enum to string (1-50 chars)
+  - Updated default type to "command"
+
+**Manual Step Required:**
+Run `database/08-add-entry-types-table.sql` in Supabase SQL Editor to create the entry_types table and seed default types.
+
+**Result:**
+Entry types are now database-driven. Admins can create, edit, and deactivate entry types without code changes. The system is backward compatible with existing entries.
+
+**Commit:** `326528f` - feat: Convert entry types from hardcoded enum to database-driven system
+
