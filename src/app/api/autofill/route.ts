@@ -4,6 +4,8 @@ import { isIP } from "node:net";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { Readability } from "@mozilla/readability";
+import { JSDOM } from "jsdom";
 
 export const runtime = "nodejs";
 
@@ -271,6 +273,72 @@ async function readProviderOutput(response: Response): Promise<string> {
   throw new Error("The selected model did not return text. Check that the model supports chat or text generation.");
 }
 
+async function checkRobotsTxt(url: string): Promise<boolean> {
+  try {
+    const urlObj = new URL(url);
+    const robotsUrl = `${urlObj.protocol}//${urlObj.host}/robots.txt`;
+    const response = await fetch(robotsUrl, {
+      signal: AbortSignal.timeout(5000),
+      headers: { "User-Agent": "ByteShelf-Autofill/1.0 (+https://byteshelftech.vercel.app)" },
+    });
+    if (!response.ok) return true; // If robots.txt is unreachable, allow fetch
+    const robotsTxt = await response.text();
+    const path = urlObj.pathname;
+    const lines = robotsTxt.split("\n");
+    let userAgentMatch = false;
+    let disallowed = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("User-agent:")) {
+        const agent = trimmed.split(":")[1].trim().toLowerCase();
+        userAgentMatch = agent === "*" || agent === "byteshelf-autofill";
+      } else if (userAgentMatch && trimmed.startsWith("Disallow:")) {
+        const disallowPath = trimmed.split(":")[1].trim();
+        if (path.startsWith(disallowPath)) {
+          disallowed = true;
+        }
+      }
+    }
+    return !disallowed;
+  } catch {
+    return true; // If robots.txt check fails, allow fetch
+  }
+}
+
+async function fetchPageContent(url: string): Promise<{ title: string; text: string } | null> {
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:") {
+      return null;
+    }
+
+    // Check robots.txt
+    const allowed = await checkRobotsTxt(url);
+    if (!allowed) {
+      return null;
+    }
+
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(8000),
+      headers: { "User-Agent": "ByteShelf-Autofill/1.0 (+https://byteshelftech.vercel.app)" },
+    });
+    if (!res.ok) return null;
+
+    const html = await res.text();
+    const dom = new JSDOM(html, { url });
+    const article = new Readability(dom.window.document).parse();
+    if (!article) return null;
+
+    return {
+      title: article.title || "",
+      text: (article.textContent || "").slice(0, 6000), // Cap at 6000 chars
+    };
+  } catch {
+    return null; // Network/parse failure - degrade gracefully
+  }
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -313,6 +381,26 @@ export async function POST(request: Request) {
 
   try {
     const input = parsed.data;
+    let sourceText = input.content;
+
+    // If content looks like a URL, try to fetch the page
+    const urlMatch = input.content.match(/^https?:\/\/[^\s]+$/i);
+    if (urlMatch) {
+      const url = urlMatch[0];
+      const pageContent = await fetchPageContent(url);
+      if (pageContent) {
+        sourceText = JSON.stringify({
+          url,
+          title: pageContent.title,
+          content: pageContent.text,
+        });
+      } else {
+        return NextResponse.json({
+          error: "Couldn't fetch that page automatically. You can still fill the form manually, or try pasting a short description instead of the link.",
+        }, { status: 502 });
+      }
+    }
+
     const provider = input.provider === "auto" ? detectProvider(input.api_key) : input.provider;
     if (!provider) {
       return NextResponse.json({
@@ -331,7 +419,7 @@ export async function POST(request: Request) {
         headers: { "Content-Type": "application/json", "x-goog-api-key": input.api_key },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: promptFor(input.category_names) }] },
-          contents: [{ parts: [{ text: JSON.stringify({ source_text: input.content }) }] }],
+          contents: [{ parts: [{ text: JSON.stringify({ source_text: sourceText }) }] }],
         }),
         signal,
         redirect: "manual",
@@ -348,7 +436,7 @@ export async function POST(request: Request) {
           model,
           max_tokens: 2048,
           system: promptFor(input.category_names),
-          messages: [{ role: "user", content: JSON.stringify({ source_text: input.content }) }],
+          messages: [{ role: "user", content: JSON.stringify({ source_text: sourceText }) }],
         }),
         signal,
         redirect: "manual",
@@ -356,7 +444,7 @@ export async function POST(request: Request) {
     } else if (provider === "custom") {
       if (!input.endpoint) return NextResponse.json({ error: "Enter the public HTTPS endpoint for your OpenAI-compatible provider." }, { status: 400 });
       const endpoint = await validateCustomEndpoint(input.endpoint);
-      providerResponse = await postToPinnedEndpoint(endpoint.url, endpoint.address, endpoint.family, input.api_key, model, input.content, input.category_names);
+      providerResponse = await postToPinnedEndpoint(endpoint.url, endpoint.address, endpoint.family, input.api_key, model, sourceText, input.category_names);
     } else {
       const endpoint = providerEndpoints[provider];
       if (!endpoint) return NextResponse.json({ error: "This provider is not configured." }, { status: 400 });
@@ -371,7 +459,7 @@ export async function POST(request: Request) {
           model,
           messages: [
             { role: "system", content: promptFor(input.category_names) },
-            { role: "user", content: JSON.stringify({ source_text: input.content }) },
+            { role: "user", content: JSON.stringify({ source_text: sourceText }) },
           ],
         }),
         signal,
