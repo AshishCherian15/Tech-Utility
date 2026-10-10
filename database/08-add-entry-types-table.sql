@@ -48,7 +48,7 @@ CREATE POLICY "Admins can read all entry types"
   FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM public.users
+      SELECT 1 FROM auth.users
       WHERE id = auth.uid()
       AND email = (SELECT value FROM (
         SELECT current_setting('app.admin_email', true) AS value
@@ -62,7 +62,7 @@ CREATE POLICY "Only admins can create entry types"
   FOR INSERT
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM public.users
+      SELECT 1 FROM auth.users
       WHERE id = auth.uid()
       AND email = (SELECT value FROM (
         SELECT current_setting('app.admin_email', true) AS value
@@ -76,7 +76,7 @@ CREATE POLICY "Only admins can update entry types"
   FOR UPDATE
   USING (
     EXISTS (
-      SELECT 1 FROM public.users
+      SELECT 1 FROM auth.users
       WHERE id = auth.uid()
       AND email = (SELECT value FROM (
         SELECT current_setting('app.admin_email', true) AS value
@@ -90,7 +90,7 @@ CREATE POLICY "Only admins can delete entry types"
   FOR DELETE
   USING (
     EXISTS (
-      SELECT 1 FROM public.users
+      SELECT 1 FROM auth.users
       WHERE id = auth.uid()
       AND email = (SELECT value FROM (
         SELECT current_setting('app.admin_email', true) AS value
