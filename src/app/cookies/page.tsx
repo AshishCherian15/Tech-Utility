@@ -11,10 +11,6 @@ export default function CookiesPage() {
     <main className="legal-page">
       <BackLink href="/login">Back to sign in</BackLink>
       <h1>Cookies and browser storage</h1>
-      <aside className="legal-draft-notice" role="note">
-        Confirm this list against the actual hosting and authentication configuration before
-        inviting users to a deployed instance.
-      </aside>
       <h2>Essential cookies</h2>
       <p>
         Supabase Auth uses cookies to maintain the signed-in session. These are necessary for
