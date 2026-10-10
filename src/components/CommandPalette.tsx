@@ -27,7 +27,7 @@ export default function CommandPalette({ entries }: CommandPaletteProps) {
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
 
-  // Ctrl+K / Cmd+K to open
+  // Ctrl+K / Cmd+K to open, N for new entry
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -44,10 +44,18 @@ export default function CommandPalette({ entries }: CommandPaletteProps) {
         }
       }
       if (open && e.key === "Escape") setOpen(false);
+      // N for new entry (when not in an input)
+      if (!open && e.key === "n" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const activeTag = document.activeElement?.tagName.toLowerCase();
+        if (activeTag !== "input" && activeTag !== "textarea" && activeTag !== "select") {
+          e.preventDefault();
+          router.push("/entries/new");
+        }
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open]);
+  }, [open, router]);
 
   useEffect(() => {
     if (open) {
@@ -184,6 +192,7 @@ export default function CommandPalette({ entries }: CommandPaletteProps) {
           <span><kbd>↵</kbd> open</span>
           <span><kbd>Esc</kbd> close</span>
           <span><kbd>Ctrl K</kbd> toggle</span>
+          <span><kbd>N</kbd> new entry</span>
         </div>
       </div>
 

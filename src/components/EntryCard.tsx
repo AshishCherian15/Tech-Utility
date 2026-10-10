@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Star, Pin, Copy, Check, Terminal } from "lucide-react";
 import { useState } from "react";
 import type { Entry } from "@/lib/types";
@@ -37,6 +38,7 @@ const PRICING_COLORS: Record<string, string> = {
 };
 
 export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entries" }: EntryCardProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [favorited, setFavorited] = useState(entry.favorited);
   const [pinned, setPinned] = useState(entry.pinned);
@@ -56,7 +58,7 @@ export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entrie
     }
   };
 
-  const toggleFavorite = async (e: React.MouseEvent) => {
+  const toggleFavorite = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (updatingFavorite) return;
@@ -79,7 +81,7 @@ export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entrie
     }
   };
 
-  const togglePin = async (e: React.MouseEvent) => {
+  const togglePin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (updatingPin) return;
@@ -102,8 +104,29 @@ export default function EntryCard({ entry, typeColorClass, hrefPrefix = "/entrie
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "e" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      router.push(`${hrefPrefix}/${entry.id}/edit`);
+    }
+    if (e.key === "f" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      toggleFavorite(e);
+    }
+    if (e.key === "p" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      togglePin(e);
+    }
+  };
+
   return (
-    <Link href={`${hrefPrefix}/${entry.id}`} className="entry-card" style={{ background: cardBg }}>
+    <Link
+      href={`${hrefPrefix}/${entry.id}`}
+      className="entry-card"
+      style={{ background: cardBg }}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+    >
       {/* Xiaomi Notes style top image preview */}
       {entry.cover_image_url && (
         <div style={{ margin: "-16px -16px 12px -16px", height: 130, overflow: "hidden", borderBottom: "1px solid var(--border-card)", position: "relative" }}>
